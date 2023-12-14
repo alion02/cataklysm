@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 pub const WHITE: bool = false;
 pub const BLACK: bool = true;
 
@@ -6,6 +8,26 @@ pub const BLACK: bool = true;
 pub struct Pair<T> {
     pub white: T,
     pub black: T,
+}
+
+impl<T> Index<bool> for Pair<T> {
+    type Output = T;
+
+    fn index(&self, index: bool) -> &T {
+        match index {
+            WHITE => &self.white,
+            BLACK => &self.black,
+        }
+    }
+}
+
+impl<T> IndexMut<bool> for Pair<T> {
+    fn index_mut(&mut self, index: bool) -> &mut T {
+        match index {
+            WHITE => &mut self.white,
+            BLACK => &mut self.black,
+        }
+    }
 }
 
 impl<T> Pair<T> {
