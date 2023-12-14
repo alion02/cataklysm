@@ -1,6 +1,33 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Hand(u32);
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub struct Pattern(u32);
+
+impl Iterator for Pattern {
+    type Item = u32;
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        (self.0 != 0).then(|| {
+            let r = self.0.trailing_zeros();
+            self.0 = self.0 >> r & !1;
+            r
+        })
+    }
+
+    #[inline(always)]
+    fn count(self) -> usize {
+        self.0.count_ones() as usize
+    }
+
+    #[inline(always)]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let c = self.count();
+        (c, Some(c))
+    }
+}
+
 mod stack64 {
     use super::*;
 
