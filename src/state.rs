@@ -264,7 +264,7 @@ mod size6 {
 
                     let (taken, drops) = pat.execute();
 
-                    let (mut hand, empty) = s.stacks[sq.0].pop(taken);
+                    let (mut hand, empty) = s.stacks[sq].pop(taken);
 
                     let r = f(s);
 
