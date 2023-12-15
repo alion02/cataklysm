@@ -1,6 +1,9 @@
 #![allow(unused)]
 
-use std::mem::transmute;
+use std::{
+    mem::transmute,
+    ops::{Index, IndexMut},
+};
 
 use crate::pair::*;
 use crate::stack::*;
@@ -62,22 +65,56 @@ mod size6 {
     const ARR_LEN: usize = SIZE * ROW_LEN - PADDING;
 
     #[derive(Clone, Copy, PartialEq, Eq)]
+    struct Square(usize);
+
+    impl<T> Index<Square> for [T] {
+        type Output = T;
+
+        #[inline(always)]
+        fn index(&self, index: Square) -> &Self::Output {
+            unsafe { self.get(index.0).unwrap_unchecked() }
+        }
+    }
+
+    impl<T> IndexMut<Square> for [T] {
+        #[inline(always)]
+        fn index_mut(&mut self, index: Square) -> &mut Self::Output {
+            unsafe { self.get_mut(index.0).unwrap_unchecked() }
+        }
+    }
+
+    impl Square {
+        #[inline(always)]
+        fn bit(self) -> Bitboard {
+            1 << self.0
+        }
+    }
+
+    #[inline(always)]
+    fn sq(sq: usize) -> Square {
+        debug_assert!(sq < ARR_LEN);
+        debug_assert!(sq % ROW_LEN < SIZE);
+
+        Square(sq)
+    }
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
     struct Pattern(u32);
 
     impl Pattern {
         #[inline(always)]
-        fn new(mask: u32) -> Self {
-            debug_assert!(mask > 0);
-            debug_assert!(mask < 1 << HAND);
-
-            Self(mask)
-        }
-
-        #[inline(always)]
-        fn drop_counts(self) -> (u32, DropCounts) {
+        fn execute(self) -> (u32, DropCounts) {
             let mut dc = DropCounts(self.0 | 1 << HAND);
             (HAND - dc.next().unwrap(), dc)
         }
+    }
+
+    #[inline(always)]
+    fn pat(pat: u32) -> Pattern {
+        debug_assert!(pat > 0);
+        debug_assert!(pat < 1 << HAND);
+
+        Pattern(pat)
     }
 
     #[derive(Clone, Copy, PartialEq, Eq)]
@@ -93,16 +130,16 @@ mod size6 {
         }
 
         #[inline(always)]
-        fn place(sq: usize, piece: Piece) -> Self {
-            Self(sq as ActionBacking | (piece as ActionBacking) << Self::TYPE_OFFSET)
+        fn place(sq: Square, piece: Piece) -> Self {
+            Self(sq.0 as ActionBacking | (piece as ActionBacking) << Self::TYPE_OFFSET)
         }
 
         #[inline(always)]
-        fn spread(sq: usize, dir: Direction, pat: u32) -> Self {
+        fn spread(sq: Square, dir: Direction, pat: Pattern) -> Self {
             Self(
-                sq as ActionBacking
+                sq.0 as ActionBacking
                     | (dir as ActionBacking) << Self::TYPE_OFFSET
-                    | (pat as ActionBacking) << Self::PAT_OFFSET,
+                    | (pat.0 as ActionBacking) << Self::PAT_OFFSET,
             )
         }
 
@@ -111,13 +148,13 @@ mod size6 {
             self,
             state: S,
             pass: impl FnOnce(S) -> R,
-            place: impl FnOnce(S, usize, Piece) -> R,
-            spread: impl FnOnce(S, usize, Direction, u32) -> R,
+            place: impl FnOnce(S, Square, Piece) -> R,
+            spread: impl FnOnce(S, Square, Direction, Pattern) -> R,
         ) -> R {
             if self.0 == 0 {
                 pass(state)
             } else {
-                let sq = self.0 as usize & (1 << Self::TYPE_OFFSET) - 1;
+                let sq = sq(self.0 as usize & (1 << Self::TYPE_OFFSET) - 1);
                 if self.0 < 1 << Self::PAT_OFFSET {
                     place(state, sq, unsafe {
                         transmute(self.0 as u32 >> Self::TYPE_OFFSET)
@@ -127,7 +164,7 @@ mod size6 {
                         state,
                         sq,
                         unsafe { transmute(self.0 as u32 >> Self::TYPE_OFFSET & 3) },
-                        self.0 as u32 >> Self::PAT_OFFSET,
+                        pat(self.0 as u32 >> Self::PAT_OFFSET),
                     )
                 }
             }
@@ -179,7 +216,7 @@ mod size6 {
                     (s, r)
                 },
                 |(s, f), sq, piece| {
-                    let bit = 1 << sq;
+                    let bit = sq.bit();
 
                     if piece.is_road() {
                         s.road[color] ^= bit;
@@ -220,13 +257,15 @@ mod size6 {
                     (s, r)
                 },
                 |(s, f), sq, dir, mut pat| {
-                    let bit = 1 << sq;
+                    let bit = sq.bit();
 
                     let road = s.road[color];
                     let block = s.block[color];
                     let stacks = s.stacks;
 
-                    let (mut hand, empty) = s.stacks[sq].pop(HAND - pat.trailing_zeros());
+                    let (taken, drops) = pat.execute();
+
+                    let (mut hand, empty) = s.stacks[sq.0].pop(taken);
 
                     let r = f(s);
 
