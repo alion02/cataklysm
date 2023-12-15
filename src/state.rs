@@ -56,12 +56,29 @@ mod size6 {
 
     // end of parameters
 
-    type Pat = Pattern<HAND>;
-
     const HAND: u32 = SIZE as u32;
 
     const PADDING: usize = ROW_LEN - SIZE;
     const ARR_LEN: usize = SIZE * ROW_LEN - PADDING;
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    struct Pattern(u32);
+
+    impl Pattern {
+        #[inline(always)]
+        fn new(mask: u32) -> Self {
+            debug_assert!(mask > 0);
+            debug_assert!(mask < 1 << HAND);
+
+            Self(mask)
+        }
+
+        #[inline(always)]
+        fn drop_counts(self) -> (u32, DropCounts) {
+            let mut dc = DropCounts(self.0 | 1 << HAND);
+            (HAND - dc.next().unwrap(), dc)
+        }
+    }
 
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct Action(ActionBacking);

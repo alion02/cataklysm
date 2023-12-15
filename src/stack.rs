@@ -2,28 +2,7 @@
 pub struct Hand(u32);
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub struct Pattern<const HAND: u32>(u32);
-
-impl<const HAND: u32> Pattern<HAND> {
-    #[inline(always)]
-    pub fn new(mask: u32) -> Self {
-        assert!(HAND < u32::BITS);
-
-        debug_assert!(mask > 0);
-        debug_assert!(mask < 1 << HAND);
-
-        Self(mask)
-    }
-
-    #[inline(always)]
-    pub fn drop_counts(self) -> (u32, DropCounts) {
-        let mut dc = DropCounts(self.0 | 1 << HAND);
-        (HAND - dc.next().unwrap(), dc)
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-pub struct DropCounts(u32);
+pub struct DropCounts(pub u32);
 
 impl Iterator for DropCounts {
     type Item = u32;
