@@ -56,6 +56,8 @@ mod size6 {
 
     // end of parameters
 
+    type Pat = Pattern<HAND>;
+
     const HAND: u32 = SIZE as u32;
 
     const PADDING: usize = ROW_LEN - SIZE;
