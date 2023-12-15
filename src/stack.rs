@@ -63,7 +63,7 @@ mod stack64 {
         }
 
         #[inline(always)]
-        pub fn push(&mut self, hand: &mut Hand, count: u32) {
+        pub fn drop(&mut self, hand: &mut Hand, count: u32) {
             debug_assert!(count != 0);
             debug_assert!(self.height() + count <= Stack::CAPACITY);
 
@@ -72,7 +72,7 @@ mod stack64 {
         }
 
         #[inline(always)]
-        pub fn pop(&mut self, count: u32) -> (Hand, bool) {
+        pub fn take(&mut self, count: u32) -> (Hand, bool) {
             debug_assert!(count != 0);
             debug_assert!(self.height() >= count);
 
