@@ -1,12 +1,11 @@
-#![allow(unused)]
+#![allow(dead_code)]
 
 use std::{
     mem::transmute,
     ops::{Index, IndexMut},
 };
 
-use crate::pair::*;
-use crate::stack::*;
+use crate::{pair::*, stack::*};
 
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
