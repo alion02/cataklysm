@@ -2,7 +2,7 @@
 
 use std::{
     mem::transmute,
-    ops::{Index, IndexMut},
+    ops::{ControlFlow, Index, IndexMut},
 };
 
 use crate::{pair::*, stack::*};
@@ -63,6 +63,17 @@ mod size6 {
 
     const PADDING: usize = ROW_LEN - SIZE;
     const ARR_LEN: usize = SIZE * ROW_LEN - PADDING;
+
+    const ROW: Bitboard = (1 << SIZE) - 1;
+    const COL: Bitboard = {
+        let mut col: Bitboard = 1;
+        while col.count_ones() < SIZE as u32 {
+            col |= col << ROW_LEN;
+        }
+        col
+    };
+
+    const BOARD: Bitboard = ROW * COL;
 
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct Square(usize);
@@ -212,6 +223,44 @@ mod size6 {
         #[inline(always)]
         fn color(&self) -> bool {
             self.ply & 1 != 0
+        }
+
+        fn for_actions<B, C>(
+            &mut self,
+            mut acc: C,
+            mut f: impl FnMut(C, &mut Self, Action) -> ControlFlow<B, C>,
+        ) -> ControlFlow<B, C> {
+            let color = self.color();
+
+            let empty =
+                BOARD ^ (self.road.white | self.block.white) ^ (self.road.black | self.block.black);
+
+            let has_stones = self.stones_left[color] > 0;
+            let has_caps = self.caps_left[color] > 0;
+            let is_opening = self.ply < 2;
+
+            let mut remaining = empty;
+            loop {
+                let sq = sq(remaining.trailing_zeros() as usize);
+
+                if has_stones {
+                    acc = f(acc, self, Action::place(sq, Piece::Flat))?;
+                    if !is_opening {
+                        acc = f(acc, self, Action::place(sq, Piece::Cap))?;
+                    }
+                }
+
+                if has_caps && !is_opening {
+                    acc = f(acc, self, Action::place(sq, Piece::Cap))?;
+                }
+
+                remaining &= remaining - 1;
+                if remaining == 0 {
+                    break;
+                }
+            }
+
+            ControlFlow::Continue(acc)
         }
 
         fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
