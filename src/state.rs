@@ -256,7 +256,7 @@ mod size6 {
                             break 'skip_nobles;
                         }
 
-                        acc = f(acc, self, Action::place(sq, Piece::Cap))?;
+                        acc = f(acc, self, Action::place(sq, Piece::Wall))?;
                     }
 
                     if has_caps {
