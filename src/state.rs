@@ -6,6 +6,7 @@ use std::{
 };
 
 use crate::{pair::*, stack::*};
+use Direction::*;
 
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -86,6 +87,17 @@ mod size6 {
         #[inline(always)]
         fn bit(self) -> Bitboard {
             1 << self.0
+        }
+
+        #[inline(always)]
+        #[must_use]
+        fn shift(self, dir: Direction) -> Self {
+            sq(match dir {
+                Right => self.0 + 1,
+                Up => self.0 + ROW_LEN,
+                Left => self.0 - 1,
+                Down => self.0 - ROW_LEN,
+            })
         }
     }
 
@@ -255,16 +267,47 @@ mod size6 {
 
                     (s, r)
                 },
-                |(s, f), sq, dir, mut pat| {
-                    let bit = sq.bit();
+                |(s, f), mut sq, dir, pat| {
+                    let mut bit = sq.bit();
 
                     let road = s.road[color];
                     let block = s.block[color];
                     let stacks = s.stacks;
 
-                    let (taken, drops) = pat.execute();
+                    let is_road = road & bit != 0;
+                    let is_block = block & bit != 0;
+
+                    let (taken, counts) = pat.execute();
 
                     let (mut hand, empty) = s.stacks[sq].take(taken);
+
+                    if empty {
+                        s.road[color] &= !bit;
+                    } else {
+                        s.road[color] |= bit;
+                    }
+                    s.block[color] &= !bit;
+
+                    for count in counts {
+                        sq = sq.shift(dir);
+                        bit = sq.bit();
+
+                        s.stacks[sq].drop(&mut hand, count);
+
+                        s.road.white &= !bit;
+                        s.road.black &= !bit;
+
+                        s.road[s.stacks[sq].top()] |= bit;
+                    }
+
+                    s.block[!color] &= !bit;
+
+                    if is_road {
+                        s.road[color] |= bit;
+                    }
+                    if is_block {
+                        s.block[color] |= bit;
+                    }
 
                     let r = f(s);
 
@@ -274,7 +317,7 @@ mod size6 {
                         s.road[color] = road;
                     }
 
-                    todo!()
+                    (s, r)
                 },
             );
 

@@ -80,6 +80,11 @@ mod stack64 {
             self.0 >>= count;
             (r, self.is_empty())
         }
+
+        #[inline(always)]
+        pub fn top(self) -> bool {
+            self.0 & 1 != 0
+        }
     }
 }
 
