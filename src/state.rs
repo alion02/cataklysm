@@ -300,12 +300,12 @@ mod size6 {
                         s.road[s.stacks[sq].top()] |= bit;
                     }
 
-                    s.block[!color] &= !bit;
-
-                    if is_road {
-                        s.road[color] |= bit;
-                    }
                     if is_block {
+                        if is_road {
+                            s.block[!color] &= !bit;
+                        } else {
+                            s.road[color] &= !bit;
+                        }
                         s.block[color] |= bit;
                     }
 
