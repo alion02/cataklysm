@@ -215,17 +215,14 @@ mod size6 {
         }
 
         fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
-            let s = self;
+            let mut s = self;
             let color = s.color();
 
             s.ply += 1;
 
-            let (s, r) = action.branch(
-                (s, f),
-                |(s, f)| {
-                    let r = f(s);
-                    (s, r)
-                },
+            let r = action.branch(
+                (&mut s, f),
+                |(s, f)| f(s),
                 |(s, f), sq, piece| {
                     let bit = sq.bit();
 
@@ -265,7 +262,7 @@ mod size6 {
                         }
                     }
 
-                    (s, r)
+                    r
                 },
                 |(s, f), mut sq, dir, pat| {
                     let mut bit = sq.bit();
@@ -317,7 +314,7 @@ mod size6 {
                         s.road[color] = road;
                     }
 
-                    (s, r)
+                    r
                 },
             );
 
