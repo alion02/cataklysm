@@ -225,6 +225,11 @@ mod size6 {
             self.ply & 1 != 0
         }
 
+        #[inline(always)]
+        fn is_opening(&self) -> bool {
+            self.ply < 2
+        }
+
         fn for_actions<B, C>(
             &mut self,
             mut acc: C,
@@ -237,7 +242,7 @@ mod size6 {
 
             let has_stones = self.stones_left[color] > 0;
             let has_caps = self.caps_left[color] > 0;
-            let is_opening = self.ply < 2;
+            let is_opening = self.is_opening();
 
             let mut remaining = empty;
             loop {
@@ -265,7 +270,7 @@ mod size6 {
 
         fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
             let mut s = self;
-            let color = s.color();
+            let color = s.color() ^ s.is_opening();
 
             s.ply += 1;
 
