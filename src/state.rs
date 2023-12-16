@@ -248,15 +248,20 @@ mod size6 {
             loop {
                 let sq = sq(remaining.trailing_zeros() as usize);
 
-                if has_stones {
-                    acc = f(acc, self, Action::place(sq, Piece::Flat))?;
-                    if !is_opening {
+                'skip_nobles: {
+                    if has_stones {
+                        acc = f(acc, self, Action::place(sq, Piece::Flat))?;
+
+                        if is_opening {
+                            break 'skip_nobles;
+                        }
+
                         acc = f(acc, self, Action::place(sq, Piece::Cap))?;
                     }
-                }
 
-                if has_caps && !is_opening {
-                    acc = f(acc, self, Action::place(sq, Piece::Cap))?;
+                    if has_caps {
+                        acc = f(acc, self, Action::place(sq, Piece::Cap))?;
+                    }
                 }
 
                 remaining &= remaining - 1;
