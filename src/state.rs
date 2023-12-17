@@ -75,6 +75,45 @@ mod size6 {
 
     const BOARD: Bitboard = ROW * COL;
 
+    #[inline(always)]
+    fn row(sq: Square) -> Bitboard {
+        ROW << sq.row().0
+    }
+
+    #[inline(always)]
+    fn col(sq: Square) -> Bitboard {
+        COL << sq.col().0
+    }
+
+    #[inline(always)]
+    fn ray(src: Square, dir: Direction) -> Bitboard {
+        match dir {
+            Right => row(src) & !1 << src.0,
+            Up => col(src) & !1 << src.0,
+            Left => row(src) & (1 << src.0) - 1,
+            Down => col(src) & (1 << src.0) - 1,
+        }
+    }
+
+    #[inline(always)]
+    fn closest_hit(ray_hits: Bitboard, dir: Direction) -> Bitboard {
+        ray_hits
+            & match dir {
+                Right | Up => ray_hits.wrapping_neg(),
+                Left | Down => !(!0 >> 1) >> ray_hits.leading_zeros(),
+            }
+    }
+
+    #[inline(always)]
+    fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
+        (match dir {
+            Right => hit.0 - src.0,
+            Up => (hit.0 - src.0) / ROW_LEN,
+            Left => src.0 - hit.0,
+            Down => (src.0 - hit.0) / ROW_LEN,
+        }) as u32
+    }
+
     #[derive(Clone, Copy, PartialEq, Eq)]
     struct Square(usize);
 
@@ -109,6 +148,18 @@ mod size6 {
                 Left => self.0 - 1,
                 Down => self.0 - ROW_LEN,
             })
+        }
+
+        #[inline(always)]
+        #[must_use]
+        fn row(self) -> Self {
+            sq(self.0 / ROW_LEN * ROW_LEN)
+        }
+
+        #[inline(always)]
+        #[must_use]
+        fn col(self) -> Self {
+            sq(self.0 % ROW_LEN)
         }
     }
 
@@ -237,8 +288,11 @@ mod size6 {
         ) -> ControlFlow<B, C> {
             let color = self.color();
 
-            let empty =
-                BOARD ^ (self.road.white | self.block.white) ^ (self.road.black | self.block.black);
+            let own = self.road.white | self.block.white;
+            let empty = BOARD ^ own ^ (self.road.black | self.block.black);
+
+            let block = self.block.white | self.block.black;
+            let cap = block & (self.road.white | self.road.black);
 
             let has_stones = self.stones_left[color] > 0;
             let has_caps = self.caps_left[color] > 0;
@@ -267,6 +321,55 @@ mod size6 {
                 remaining &= remaining - 1;
                 if remaining == 0 {
                     break;
+                }
+            }
+
+            if !is_opening {
+                remaining = own;
+                loop {
+                    let src = sq(remaining.trailing_zeros() as usize);
+                    let src_bit = remaining & remaining.wrapping_neg();
+
+                    let is_cap = src_bit & cap != 0;
+
+                    let max_pieces = self.stacks[src].height().min(HAND);
+                    let start_bit = 1 << HAND >> max_pieces;
+
+                    for dir in [Right, Up, Left, Down] {
+                        let ray = ray(src, dir);
+                        let ray_hits = ray & block;
+                        let hit = closest_hit(ray_hits, dir);
+
+                        let range = if hit != 0 {
+                            distance(src, sq(hit.trailing_zeros() as usize), dir) - 1
+                        } else {
+                            ray.count_ones()
+                        };
+
+                        let mut pattern = start_bit;
+                        loop {
+                            acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
+
+                            pattern += if pattern.count_ones() == range {
+                                pattern & pattern.wrapping_neg()
+                            } else {
+                                start_bit
+                            };
+
+                            if pattern >= 1 << HAND {
+                                break;
+                            }
+                        }
+
+                        if is_cap && hit & cap != 0 {
+                            todo!()
+                        }
+                    }
+
+                    remaining &= remaining - 1;
+                    if remaining == 0 {
+                        break;
+                    }
                 }
             }
 
