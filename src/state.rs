@@ -338,31 +338,38 @@ mod size6 {
                     for dir in [Right, Up, Left, Down] {
                         let ray = ray(src, dir);
                         let ray_hits = ray & block;
-                        let hit = closest_hit(ray_hits, dir);
+                        let ray_hit = closest_hit(ray_hits, dir);
 
-                        let range = if hit != 0 {
-                            distance(src, sq(hit.trailing_zeros() as usize), dir) - 1
+                        let range = if ray_hit != 0 {
+                            distance(src, sq(ray_hit.trailing_zeros() as usize), dir) - 1
                         } else {
                             ray.count_ones()
                         };
 
-                        let mut pattern = start_bit;
-                        loop {
-                            acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
+                        let mut do_spreads = |mut acc, mut pattern, range, limit| {
+                            loop {
+                                acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
 
-                            pattern += if pattern.count_ones() == range {
-                                pattern & pattern.wrapping_neg()
-                            } else {
-                                start_bit
-                            };
+                                pattern += if pattern.count_ones() == range {
+                                    pattern & pattern.wrapping_neg()
+                                } else {
+                                    start_bit
+                                };
 
-                            if pattern >= 1 << HAND {
-                                break;
+                                if pattern >= limit {
+                                    break;
+                                }
                             }
-                        }
 
-                        if is_cap && hit & cap != 0 {
-                            todo!()
+                            ControlFlow::Continue(acc)
+                        };
+
+                        if is_cap && ray_hit & !cap != 0 {
+                            // Smash possible
+                            acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
+                            acc = do_spreads(acc, start_bit | 1 << HAND - 1, range + 1, 1 << HAND)?;
+                        } else {
+                            acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                         }
                     }
 
