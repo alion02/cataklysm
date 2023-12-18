@@ -350,14 +350,16 @@ mod size6 {
                         };
 
                         let mut do_spreads = |mut acc, mut pattern, range, limit| {
-                            while pattern < limit {
-                                acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
+                            if range > 0 {
+                                while pattern < limit {
+                                    acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
 
-                                pattern += if pattern.count_ones() == range {
-                                    pattern & pattern.wrapping_neg()
-                                } else {
-                                    start_bit
-                                };
+                                    pattern += if pattern.count_ones() == range {
+                                        pattern & pattern.wrapping_neg()
+                                    } else {
+                                        start_bit
+                                    };
+                                }
                             }
 
                             ControlFlow::Continue(acc)
