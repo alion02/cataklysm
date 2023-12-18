@@ -326,7 +326,7 @@ mod size6 {
 
             if !is_opening {
                 remaining = own;
-                loop {
+                while remaining != 0 {
                     let src = sq(remaining.trailing_zeros() as usize);
                     let src_bit = remaining & remaining.wrapping_neg();
 
@@ -370,9 +370,6 @@ mod size6 {
                     }
 
                     remaining &= remaining - 1;
-                    if remaining == 0 {
-                        break;
-                    }
                 }
             }
 
