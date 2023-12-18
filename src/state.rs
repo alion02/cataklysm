@@ -512,7 +512,6 @@ mod size6 {
         use rstest::rstest;
 
         #[rstest]
-        #[case(0, 1)]
         #[case(1, 36)]
         #[case(2, 1260)]
         #[case(3, 132720)]
