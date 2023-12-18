@@ -288,8 +288,8 @@ mod size6 {
         ) -> ControlFlow<B, C> {
             let color = self.color();
 
-            let own = self.road.white | self.block.white;
-            let empty = BOARD ^ own ^ (self.road.black | self.block.black);
+            let own = self.road[color] | self.block[color];
+            let empty = BOARD ^ own ^ (self.road[!color] | self.block[!color]);
 
             let block = self.block.white | self.block.black;
             let cap = block & (self.road.white | self.road.black);
