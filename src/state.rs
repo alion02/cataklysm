@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::{
+    convert::Infallible,
     mem::transmute,
     ops::{ControlFlow, Index, IndexMut},
 };
@@ -485,6 +486,36 @@ mod size6 {
             }
 
             r
+        }
+
+        fn perft(&mut self, depth: u32) -> u64 {
+            if depth == 0 {
+                1
+            } else {
+                let mut sum = 0;
+                self.for_actions((), |_, s, action| {
+                    sum += s.with(true, action, |s| s.perft(depth - 1));
+                    ControlFlow::<Infallible, ()>::Continue(())
+                });
+                sum
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn perft() {
+            let test = |depth, expected| assert_eq!(State::default().perft(depth), expected);
+
+            test(0, 1);
+            test(1, 36);
+            test(2, 1260);
+            test(3, 132720);
+            test(4, 13586048);
+            test(5, 12535065201);
         }
     }
 }
