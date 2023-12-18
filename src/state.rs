@@ -492,17 +492,105 @@ mod size6 {
             r
         }
 
+        #[inline]
+        fn status<S, R>(
+            &mut self,
+            state: S,
+            ongoing: impl FnOnce(S, &mut Self) -> R,
+            draw: impl FnOnce(S, &mut Self) -> R,
+            win: impl FnOnce(S, &mut Self) -> R,
+            loss: impl FnOnce(S, &mut Self) -> R,
+        ) -> R {
+            let color = self.color();
+
+            if self.has_road(!color) {
+                return loss(state, self);
+            }
+
+            if self.has_road(color) {
+                return win(state, self);
+            }
+
+            if self.stones_left[color] == 0 && self.caps_left[color] == 0
+                || self.road.white | self.road.black | self.block.white | self.block.black == BOARD
+            {
+                let own = self.count_flats(color);
+                let opp = self.count_flats(!color);
+
+                return if opp > own {
+                    loss(state, self)
+                } else if own > opp {
+                    win(state, self)
+                } else {
+                    draw(state, self)
+                };
+            }
+
+            ongoing(state, self)
+        }
+
+        #[inline]
+        fn has_road(&self, color: bool) -> bool {
+            let road = self.road[color];
+
+            const BOTTOM: usize = 0;
+            const TOP: usize = 1;
+            const LEFT: usize = 2;
+            const RIGHT: usize = 3;
+
+            let mut edges = [0; 4];
+
+            edges[BOTTOM] = row(sq(0));
+            edges[TOP] = row(sq((SIZE - 1) * ROW_LEN));
+            edges[LEFT] = col(sq(0));
+            edges[RIGHT] = col(sq(SIZE - 1));
+
+            let mut curr = edges.map(|e| e & road);
+
+            loop {
+                // Fill all nearby road tiles
+                let next = curr.map(|c| (c | c << 1 | c >> 1 | c << ROW_LEN | c >> ROW_LEN) & road);
+
+                if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
+                    // If either pair of edges met, there is a road
+                    return true;
+                }
+
+                if ((next[BOTTOM] == curr[BOTTOM]) | (next[TOP] == curr[TOP]))
+                    & ((next[LEFT] == curr[LEFT]) | (next[RIGHT] == curr[RIGHT]))
+                {
+                    // If at least one edge stagnated in both pairs of directions, there can be no road
+                    return false;
+                }
+
+                curr = next;
+            }
+        }
+
+        #[inline(always)]
+        fn count_flats(&self, color: bool) -> u32 {
+            (self.road[color] & !self.block[color]).count_ones()
+        }
+
         fn perft(&mut self, depth: u32) -> u64 {
             if depth == 0 {
-                1
-            } else {
-                let mut sum = 0;
-                self.for_actions((), |_, s, action| {
-                    sum += s.with(true, action, |s| s.perft(depth - 1));
-                    ControlFlow::<Infallible, ()>::Continue(())
-                });
-                sum
+                return 1;
             }
+
+            self.status(
+                (),
+                |_, s| {
+                    let mut sum = 0;
+                    s.for_actions((), |_, s, action| {
+                        sum += s.with(true, action, |s| s.perft(depth - 1));
+                        ControlFlow::<Infallible, ()>::Continue(())
+                    });
+                    sum
+                },
+                |_, _| 1,
+                |_, _| 1,
+                |_, _| 1,
+            )
         }
     }
 
