@@ -434,12 +434,12 @@ mod size6 {
                 |(s, f), mut sq, dir, pat| {
                     let mut bit = sq.bit();
 
-                    let road = s.road[color];
-                    let block = s.block[color];
+                    let road = s.road;
+                    let block = s.block;
                     let stacks = s.stacks;
 
-                    let is_road = road & bit != 0;
-                    let is_block = block & bit != 0;
+                    let is_road = road[color] & bit != 0;
+                    let is_block = block[color] & bit != 0;
 
                     let (taken, counts) = pat.execute();
 
@@ -477,8 +477,8 @@ mod size6 {
 
                     if undo {
                         s.stacks = stacks;
-                        s.block[color] = block;
-                        s.road[color] = road;
+                        s.block = block;
+                        s.road = road;
                     }
 
                     r
