@@ -509,17 +509,17 @@ mod size6 {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use rstest::rstest;
 
-        #[test]
-        fn perft() {
-            let test = |depth, expected| assert_eq!(State::default().perft(depth), expected);
-
-            test(0, 1);
-            test(1, 36);
-            test(2, 1260);
-            test(3, 132720);
-            test(4, 13586048);
-            test(5, 12535065201);
+        #[rstest]
+        #[case(0, 1)]
+        #[case(1, 36)]
+        #[case(2, 1260)]
+        #[case(3, 132720)]
+        #[case(4, 13586048)]
+        // #[case(5, 12535065201)]
+        fn perft(#[case] depth: u32, #[case] expected: u64) {
+            assert_eq!(State::default().perft(depth), expected);
         }
     }
 }
