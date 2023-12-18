@@ -101,7 +101,7 @@ mod size6 {
         ray_hits
             & match dir {
                 Right | Up => ray_hits.wrapping_neg(),
-                Left | Down => !(!0 >> 1) >> ray_hits.leading_zeros(),
+                Left | Down => !(!(0 as Bitboard) >> 1).wrapping_shr(ray_hits.leading_zeros()),
             }
     }
 
