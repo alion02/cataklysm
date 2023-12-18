@@ -368,7 +368,7 @@ mod size6 {
                         if is_cap && ray_hit & !cap != 0 {
                             // Smash possible
                             acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
-                            acc = do_spreads(acc, start_bit | 1 << HAND - 1, range + 1, 1 << HAND)?;
+                            acc = do_spreads(acc, 1 << HAND - 1, range + 1, 1 << HAND)?;
                         } else {
                             acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                         }
