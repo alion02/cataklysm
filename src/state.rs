@@ -195,7 +195,7 @@ mod size6 {
     struct Action(ActionBacking);
 
     impl Action {
-        const TYPE_OFFSET: u32 = ARR_LEN.ilog2();
+        const TYPE_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
         const PAT_OFFSET: u32 = Self::TYPE_OFFSET + 2;
 
         #[inline(always)]
