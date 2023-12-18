@@ -516,7 +516,7 @@ mod size6 {
         #[case(2, 1260)]
         #[case(3, 132720)]
         #[case(4, 13586048)]
-        // #[case(5, 12535065201)]
+        #[cfg_attr(not(debug_assertions), case(5, 1253506520))]
         fn perft(#[case] depth: u32, #[case] expected: u64) {
             assert_eq!(State::default().perft(depth), expected);
         }
