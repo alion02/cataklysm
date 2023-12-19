@@ -568,6 +568,8 @@ mod size6 {
 
         #[inline]
         fn has_road(&self, color: bool) -> bool {
+            assert_ne!(PADDING, 0);
+
             let road = self.road[color];
 
             const BOTTOM: usize = 0;
