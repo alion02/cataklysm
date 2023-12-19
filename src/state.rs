@@ -373,7 +373,7 @@ mod size6 {
                     let max_pieces = self.stacks[src].height().min(HAND);
                     let start_bit = 1 << HAND >> max_pieces;
 
-                    assert_ne!(max_pieces, 0);
+                    debug_assert_ne!(max_pieces, 0);
 
                     for dir in [Right, Up, Left, Down] {
                         let ray = ray(src, dir);
