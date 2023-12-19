@@ -6,7 +6,7 @@ use std::{
     ops::{ControlFlow, Index, IndexMut},
 };
 
-use crate::{pair::*, stack::*};
+use crate::{game::*, pair::*, stack::*};
 use Direction::*;
 
 #[repr(u32)]
@@ -43,6 +43,7 @@ enum Direction {
     Down,
 }
 
+pub(crate) use size6::State as State6;
 mod size6 {
     use super::*;
 
@@ -272,6 +273,42 @@ mod size6 {
     }
 
     impl State {
+        pub(crate) fn new(opt: Options) -> Result<Self, NewGameError> {
+            let mut road = Pair::both(0);
+            let mut block = Pair::both(0);
+            let mut stones_left = opt.start_stones;
+            let mut caps_left = opt.start_caps;
+            let mut ply = 0;
+            let mut stacks = [Stack::EMPTY; ARR_LEN];
+
+            match opt.position {
+                Position::Start(s) => {
+                    if s != SIZE {
+                        return Err(NewGameError);
+                    }
+                }
+                Position::Tps(s) => {
+                    let tps: takparse::Tps = s.parse().map_err(|_| NewGameError)?;
+                    for (row, y) in tps.board_2d().zip((0..SIZE).rev()) {
+                        for (stack, x) in row.zip(0..SIZE) {
+                            if let Some(stack) = stack {
+                                todo!()
+                            }
+                        }
+                    }
+                }
+            }
+
+            Ok(Self {
+                road,
+                block,
+                stones_left,
+                caps_left,
+                ply,
+                stacks,
+            })
+        }
+
         #[inline(always)]
         fn color(&self) -> bool {
             self.ply & 1 != 0
@@ -593,6 +630,8 @@ mod size6 {
             )
         }
     }
+
+    impl Game for State {}
 
     #[cfg(test)]
     mod tests {
