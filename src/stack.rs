@@ -1,6 +1,13 @@
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Hand(u32);
 
+impl Hand {
+    #[inline(always)]
+    pub fn one_piece(color: bool) -> Self {
+        Self((color as u32).rotate_right(1))
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct DropCounts(pub u32);
 

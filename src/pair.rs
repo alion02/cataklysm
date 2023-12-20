@@ -1,5 +1,7 @@
 use std::ops::{Index, IndexMut};
 
+// DO NOT CHANGE
+// Current assignment assumed throughout codebase
 pub const WHITE: bool = false;
 pub const BLACK: bool = true;
 

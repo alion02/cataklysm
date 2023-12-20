@@ -288,14 +288,39 @@ mod size6 {
                     }
                 }
                 Position::Tps(s) => {
-                    let tps: takparse::Tps = s.parse().map_err(|_| NewGameError)?;
+                    use takparse::{Color, Piece, Tps};
+
+                    let tps: Tps = s.parse().map_err(|_| NewGameError)?;
                     for (row, y) in tps.board_2d().zip((0..SIZE).rev()) {
                         for (stack, x) in row.zip(0..SIZE) {
                             if let Some(stack) = stack {
-                                todo!()
+                                let sq = sq(x + y * ROW_LEN);
+
+                                for color in stack.colors() {
+                                    let color = color != Color::White;
+                                    stacks[sq].drop(&mut Hand::one_piece(color), 1);
+                                    stones_left[color] -= 1;
+                                }
+
+                                let top = stack.top();
+                                let color = stack.top_color() != Color::White;
+
+                                if matches!(top, Piece::Flat | Piece::Cap) {
+                                    road[color] |= sq.bit();
+                                }
+                                if matches!(top, Piece::Wall | Piece::Cap) {
+                                    block[color] |= sq.bit();
+                                }
+
+                                if top == Piece::Cap {
+                                    stones_left[color] += 1; // Correct overcounting from the stack
+                                    caps_left[color] -= 1;
+                                }
                             }
                         }
                     }
+
+                    ply = tps.ply() as u32;
                 }
             }
 
