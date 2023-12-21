@@ -564,7 +564,7 @@ mod size6 {
                 return win(state, self);
             }
 
-            if self.stones_left[color] == 0 && self.caps_left[color] == 0
+            if self.stones_left[!color] == 0 && self.caps_left[!color] == 0
                 || self.road.white | self.road.black | self.block.white | self.block.black == BOARD
             {
                 let own = self.count_flats(color);
