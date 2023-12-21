@@ -53,9 +53,6 @@ mod size6 {
     type Stack = Stack64;
     type ActionBacking = u16;
 
-    const START_STONES: u32 = 30;
-    const START_CAPS: u32 = 1;
-
     const SIZE: usize = 6;
     const ROW_LEN: usize = 8;
 
@@ -261,14 +258,7 @@ mod size6 {
 
     impl Default for State {
         fn default() -> Self {
-            Self {
-                road: Pair::default(),
-                block: Pair::default(),
-                stones_left: Pair::both(START_STONES),
-                caps_left: Pair::both(START_CAPS),
-                ply: 0,
-                stacks: [Stack::EMPTY; ARR_LEN],
-            }
+            Self::new(Options::from_position(Position::Start(SIZE)).unwrap()).unwrap()
         }
     }
 
