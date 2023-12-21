@@ -44,7 +44,9 @@ impl<'a> Options<'a> {
     }
 }
 
-pub trait Game {}
+pub trait Game {
+    fn perft(&mut self, depth: u32) -> u64;
+}
 
 #[derive(Debug)]
 pub struct NewGameError;
