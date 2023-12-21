@@ -614,7 +614,7 @@ mod size6 {
                 if ((next[BOTTOM] == curr[BOTTOM]) | (next[TOP] == curr[TOP]))
                     & ((next[LEFT] == curr[LEFT]) | (next[RIGHT] == curr[RIGHT]))
                 {
-                    // If at least one edge stagnated in both pairs of directions, there can be no road
+                    // If at least one edge stagnated in both directions, there can be no road
                     return false;
                 }
 
