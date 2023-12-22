@@ -9,7 +9,7 @@ fn main() {
         "perft" => {
             let tps = args.next().unwrap();
             let mut game = new_game(Options::from_position(Position::Tps(&tps)).unwrap()).unwrap();
-            for d in 0.. {
+            for d in 1.. {
                 let time = Instant::now();
                 let nodes = game.perft(d);
                 let secs = time.elapsed().as_secs_f64();
