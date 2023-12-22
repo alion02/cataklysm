@@ -186,7 +186,6 @@ mod size6 {
             Self(0)
         }
 
-        #[inline(always)]
         fn place(sq: Square, piece: Piece) -> Self {
             Self(sq.0 as ActionBacking | (piece as ActionBacking) << Self::TYPE_OFFSET)
         }
