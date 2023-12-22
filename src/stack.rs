@@ -79,17 +79,23 @@ mod stack64 {
         }
 
         #[inline(always)]
-        pub fn take(&mut self, count: u32) -> (Hand, bool) {
+        pub fn take(&mut self, count: u32) -> Hand {
             debug_assert!(count != 0);
             debug_assert!(self.height() >= count);
 
             let r = Hand((self.0 as u32).wrapping_shl(count.wrapping_neg()));
             self.0 >>= count;
-            (r, self.is_empty())
+            r
         }
 
         #[inline(always)]
-        pub fn top(self) -> bool {
+        pub fn top(self) -> Option<bool> {
+            (!self.is_empty()).then_some(self.0 & 1 != 0)
+        }
+
+        #[inline(always)]
+        pub fn top_unchecked(self) -> bool {
+            debug_assert!(!self.is_empty());
             self.0 & 1 != 0
         }
     }

@@ -498,12 +498,14 @@ mod size6 {
 
                     let (taken, counts) = pat.execute();
 
-                    let (mut hand, empty) = s.stacks[sq].take(taken);
+                    let mut hand = s.stacks[sq].take(taken);
+                    let top = s.stacks[sq].top();
 
-                    if empty {
+                    if top.is_none() | top.is_some_and(|new_color| new_color != color) {
                         s.road[color] &= !bit;
-                    } else {
-                        s.road[color] |= bit;
+                    }
+                    if let Some(new_color) = top {
+                        s.road[new_color] |= bit;
                     }
                     s.block[color] &= !bit;
 
@@ -516,7 +518,7 @@ mod size6 {
                         s.road.white &= !bit;
                         s.road.black &= !bit;
 
-                        s.road[s.stacks[sq].top()] |= bit;
+                        s.road[s.stacks[sq].top_unchecked()] |= bit;
                     }
 
                     if is_block {
