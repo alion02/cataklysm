@@ -10,3 +10,8 @@ takparse = "0.6.0"
 
 [dev-dependencies]
 rstest = "0.18.2"
+
+[profile.dev-fast]
+inherits = "release"
+debug-assertions = true
+overflow-checks = true
