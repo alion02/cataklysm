@@ -49,7 +49,7 @@ impl<'a> Options<'a> {
 }
 
 pub trait Game {
-    fn perft(&mut self, depth: u32) -> u64;
+    fn perft(&mut self, depth: u32, cheat: bool) -> u64;
 }
 
 #[derive(Debug)]
@@ -87,7 +87,7 @@ mod tests {
                     .unwrap()
             )
             .unwrap()
-            .perft(depth),
+            .perft(depth, true),
             expected
         );
     }

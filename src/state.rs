@@ -631,10 +631,10 @@ mod size6 {
     }
 
     impl Game for State {
-        fn perft(&mut self, depth: u32) -> u64 {
+        fn perft(&mut self, depth: u32, cheat: bool) -> u64 {
             match depth {
                 0 => 1,
-                1 => self.status(
+                1 if cheat => self.status(
                     (),
                     |_, s| {
                         let mut sum = 0;
@@ -653,7 +653,7 @@ mod size6 {
                     |_, s| {
                         let mut sum = 0;
                         s.for_actions((), |_, s, action| {
-                            sum += s.with(true, action, |s| s.perft(depth - 1));
+                            sum += s.with(true, action, |s| s.perft(depth - 1, cheat));
                             ControlFlow::<Infallible, ()>::Continue(())
                         });
                         sum
@@ -679,7 +679,7 @@ mod size6 {
         #[cfg_attr(not(debug_assertions), case(5, 1253506520))]
         // 6, 112449385016
         fn perft(#[case] depth: u32, #[case] expected: u64) {
-            assert_eq!(State::default().perft(depth), expected);
+            assert_eq!(State::default().perft(depth, true), expected);
         }
     }
 }
