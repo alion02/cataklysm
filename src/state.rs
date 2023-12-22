@@ -371,41 +371,51 @@ mod size6 {
                     // TODO PERF: Removing the assert significantly reduces performance
                     assert_ne!(max_pieces, 0);
 
-                    for dir in [Right, Up, Left, Down] {
-                        let ray = ray(src, dir);
-                        let ray_hits = ray & block;
-                        let ray_hit = closest_hit(ray_hits, dir);
+                    let mut spread = {
+                        #[inline(always)]
+                        |mut acc, dir| {
+                            let ray = ray(src, dir);
+                            let ray_hits = ray & block;
+                            let ray_hit = closest_hit(ray_hits, dir);
 
-                        let range = if ray_hit != 0 {
-                            distance(src, sq(ray_hit.trailing_zeros() as usize), dir) - 1
-                        } else {
-                            ray.count_ones()
-                        };
+                            let range = if ray_hit != 0 {
+                                distance(src, sq(ray_hit.trailing_zeros() as usize), dir) - 1
+                            } else {
+                                ray.count_ones()
+                            };
 
-                        let mut do_spreads = |mut acc, mut pattern, range, limit| {
-                            if range > 0 {
-                                while pattern < limit {
-                                    acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
+                            let mut do_spreads = |mut acc, mut pattern, range, limit| {
+                                if range > 0 {
+                                    while pattern < limit {
+                                        acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
 
-                                    pattern += if pattern.count_ones() == range {
-                                        pattern & pattern.wrapping_neg()
-                                    } else {
-                                        start_bit
-                                    };
+                                        pattern += if pattern.count_ones() == range {
+                                            pattern & pattern.wrapping_neg()
+                                        } else {
+                                            start_bit
+                                        };
+                                    }
                                 }
+
+                                ControlFlow::Continue(acc)
+                            };
+
+                            if is_cap && ray_hit & !cap != 0 {
+                                // Smash possible
+                                acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
+                                acc = do_spreads(acc, 1 << HAND - 1, range + 1, 1 << HAND)?;
+                            } else {
+                                acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                             }
 
                             ControlFlow::Continue(acc)
-                        };
-
-                        if is_cap && ray_hit & !cap != 0 {
-                            // Smash possible
-                            acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
-                            acc = do_spreads(acc, 1 << HAND - 1, range + 1, 1 << HAND)?;
-                        } else {
-                            acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                         }
-                    }
+                    };
+
+                    acc = spread(acc, Right)?;
+                    acc = spread(acc, Up)?;
+                    acc = spread(acc, Left)?;
+                    acc = spread(acc, Down)?;
 
                     remaining &= remaining - 1;
                 }
