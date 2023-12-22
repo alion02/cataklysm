@@ -66,7 +66,7 @@ mod stack64 {
 
         #[inline(always)]
         pub fn is_empty(self) -> bool {
-            self.0 == 1
+            self == Stack::EMPTY
         }
 
         #[inline(always)]

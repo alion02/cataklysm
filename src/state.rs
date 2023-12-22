@@ -636,7 +636,7 @@ mod size6 {
                 (),
                 |_| false,
                 |_, sq, piece| {
-                    self.stacks[sq] == Stack::EMPTY
+                    self.stacks[sq].is_empty()
                         && if piece.is_stone() {
                             self.stones_left[color] != 0
                         } else {
