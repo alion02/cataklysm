@@ -4,3 +4,4 @@ pub mod game;
 pub mod pair;
 pub mod stack;
 pub mod state;
+pub mod util;

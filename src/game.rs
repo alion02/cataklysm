@@ -48,8 +48,15 @@ impl<'a> Options<'a> {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PerftMode {
+    Naive,
+    Batch,
+    Specialized,
+}
+
 pub trait Game {
-    fn perft(&mut self, depth: u32, cheat: bool) -> u64;
+    fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
 }
 
 #[derive(Debug)]
@@ -87,7 +94,7 @@ mod tests {
                     .unwrap()
             )
             .unwrap()
-            .perft(depth, true),
+            .perft(depth, PerftMode::Batch),
             expected
         );
     }

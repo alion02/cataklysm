@@ -6,7 +6,7 @@ use std::{
     ops::{ControlFlow, Index, IndexMut},
 };
 
-use crate::{game::*, pair::*, stack::*};
+use crate::{game::*, pair::*, stack::*, util::*};
 use Direction::*;
 
 #[repr(u32)]
@@ -641,18 +641,14 @@ mod size6 {
     }
 
     impl Game for State {
-        fn perft(&mut self, depth: u32, cheat: bool) -> u64 {
+        fn perft(&mut self, depth: u32, mode: PerftMode) -> u64 {
             match depth {
                 0 => 1,
-                1 if cheat => self.status(
+                1 if mode == PerftMode::Batch => self.status(
                     (),
                     |_, s| {
-                        let mut sum = 0;
-                        s.for_actions((), |_, _, _| {
-                            sum += 1;
-                            ControlFlow::<Infallible, ()>::Continue(())
-                        });
-                        sum
+                        s.for_actions(0, |sum, _, _| ControlFlow::Continue(sum + 1))
+                            .into_continue()
                     },
                     |_, _| 1,
                     |_, _| 1,
@@ -661,12 +657,12 @@ mod size6 {
                 _ => self.status(
                     (),
                     |_, s| {
-                        let mut sum = 0;
-                        s.for_actions((), |_, s, action| {
-                            sum += s.with(true, action, |s| s.perft(depth - 1, cheat));
-                            ControlFlow::<Infallible, ()>::Continue(())
-                        });
-                        sum
+                        s.for_actions(0, |sum, s, action| {
+                            ControlFlow::Continue(
+                                sum + s.with(true, action, |s| s.perft(depth - 1, mode)),
+                            )
+                        })
+                        .into_continue()
                     },
                     |_, _| 1,
                     |_, _| 1,
@@ -689,7 +685,7 @@ mod size6 {
         #[cfg_attr(not(debug_assertions), case(5, 1253506520))]
         // 6, 112449385016
         fn perft(#[case] depth: u32, #[case] expected: u64) {
-            assert_eq!(State::default().perft(depth, true), expected);
+            assert_eq!(State::default().perft(depth, PerftMode::Batch), expected);
         }
     }
 }
