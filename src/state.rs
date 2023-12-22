@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use std::{
-    convert::Infallible,
     mem::transmute,
     ops::{ControlFlow, Index, IndexMut},
 };
