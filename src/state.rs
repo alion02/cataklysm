@@ -438,6 +438,8 @@ mod size6 {
             let mut s = self;
             let color = s.color() ^ s.is_opening();
 
+            debug_assert!(s.is_legal(action));
+
             s.ply += 1;
 
             let r = action.branch(
@@ -625,6 +627,28 @@ mod size6 {
         #[inline(always)]
         fn count_flats(&self, color: bool) -> u32 {
             (self.road[color] & !self.block[color]).count_ones()
+        }
+
+        #[inline]
+        fn is_legal(&self, action: Action) -> bool {
+            let color = self.color();
+            action.branch(
+                (),
+                |_| false,
+                |_, sq, piece| {
+                    self.stacks[sq] == Stack::EMPTY
+                        && if piece.is_stone() {
+                            self.stones_left[color] != 0
+                        } else {
+                            self.caps_left[color] != 0
+                        }
+                },
+                |_, sq, dir, pat| {
+                    let (taken, counts) = pat.execute();
+                    self.stacks[sq].height() >= taken
+                    // TODO
+                },
+            )
         }
     }
 
