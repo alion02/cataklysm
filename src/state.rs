@@ -656,8 +656,23 @@ mod size6 {
 
     impl Game for State {
         fn perft(&mut self, depth: u32) -> u64 {
-            fn inner_perft(s: &mut State, depth: u32) -> u64 {
-                s.status(
+            match depth {
+                0 => 1,
+                1 => self.status(
+                    (),
+                    |_, s| {
+                        let mut sum = 0;
+                        s.for_actions((), |_, _, _| {
+                            sum += 1;
+                            ControlFlow::<Infallible, ()>::Continue(())
+                        });
+                        sum
+                    },
+                    |_, _| 1,
+                    |_, _| 1,
+                    |_, _| 1,
+                ),
+                _ => self.status(
                     (),
                     |_, s| {
                         let mut sum = 0;
@@ -670,13 +685,7 @@ mod size6 {
                     |_, _| 1,
                     |_, _| 1,
                     |_, _| 1,
-                )
-            }
-
-            match depth {
-                0 => 1,
-                1 => inner_perft(self, 1),
-                _ => inner_perft(self, depth),
+                ),
             }
         }
     }
