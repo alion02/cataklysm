@@ -22,7 +22,6 @@ fn main() {
                         match mode {
                             PerftMode::Naive => "naive",
                             PerftMode::Batch => "batch",
-                            PerftMode::Specialized => "specialized",
                         },
                     );
                 }

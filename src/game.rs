@@ -52,7 +52,6 @@ impl<'a> Options<'a> {
 pub enum PerftMode {
     Naive,
     Batch,
-    Specialized,
 }
 
 pub trait Game {
