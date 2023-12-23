@@ -12,3 +12,16 @@ impl<T> ControlFlowExt<T> for ControlFlow<Infallible, T> {
         }
     }
 }
+
+pub trait ControlFlowIntoInner<T> {
+    fn into_inner(self) -> T;
+}
+
+impl<T> ControlFlowIntoInner<T> for ControlFlow<T, T> {
+    fn into_inner(self) -> T {
+        match self {
+            ControlFlow::Continue(v) => v,
+            ControlFlow::Break(v) => v,
+        }
+    }
+}
