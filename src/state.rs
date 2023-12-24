@@ -2,7 +2,10 @@
 
 use std::{
     mem::transmute,
-    ops::{ControlFlow, Index, IndexMut},
+    ops::{
+        ControlFlow::{self, *},
+        Index, IndexMut,
+    },
 };
 
 use crate::{game::*, pair::*, stack::*, util::*};
@@ -396,7 +399,7 @@ mod size6 {
                                     }
                                 }
 
-                                ControlFlow::Continue(acc)
+                                Continue(acc)
                             };
 
                             if is_cap && ray_hit & !cap != 0 {
@@ -407,7 +410,7 @@ mod size6 {
                                 acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                             }
 
-                            ControlFlow::Continue(acc)
+                            Continue(acc)
                         }
                     };
 
@@ -420,7 +423,7 @@ mod size6 {
                 }
             }
 
-            ControlFlow::Continue(acc)
+            Continue(acc)
         }
 
         fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
@@ -646,7 +649,7 @@ mod size6 {
                 1 if mode == PerftMode::Batch => self.status(
                     (),
                     |_, s| {
-                        s.for_actions(0, |sum, _, _| ControlFlow::Continue(sum + 1))
+                        s.for_actions(0, |sum, _, _| Continue(sum + 1))
                             .into_continue()
                     },
                     |_, _| 1,
@@ -657,9 +660,7 @@ mod size6 {
                     (),
                     |_, s| {
                         s.for_actions(0, |sum, s, action| {
-                            ControlFlow::Continue(
-                                sum + s.with(true, action, |s| s.perft(depth - 1, mode)),
-                            )
+                            Continue(sum + s.with(true, action, |s| s.perft(depth - 1, mode)))
                         })
                         .into_continue()
                     },

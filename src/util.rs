@@ -1,10 +1,10 @@
 use std::{convert::Infallible, ops::ControlFlow};
 
-pub trait ControlFlowExt<T> {
+pub trait ControlFlowIntoContinue<T> {
     fn into_continue(self) -> T;
 }
 
-impl<T> ControlFlowExt<T> for ControlFlow<Infallible, T> {
+impl<T> ControlFlowIntoContinue<T> for ControlFlow<Infallible, T> {
     fn into_continue(self) -> T {
         match self {
             ControlFlow::Continue(v) => v,
