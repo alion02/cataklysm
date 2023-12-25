@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
 use std::{
+    fmt::{self, Display},
     mem::transmute,
     ops::{
         ControlFlow::{self, *},
@@ -190,6 +191,12 @@ macro_rules! state {
 
             #[derive(Clone, Copy, PartialEq, Eq)]
             struct Action(ActionBacking);
+
+            impl Display for Action {
+                fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
+                    todo!()
+                }
+            }
 
             impl Action {
                 const TYPE_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
@@ -694,6 +701,10 @@ macro_rules! state {
                             |_, _| 1,
                         ),
                     }
+                }
+
+                fn tinue(&mut self, depth: u32) -> Tinue<Box<dyn crate::game::Action>> {
+                    Tinue::Unknown
                 }
             }
 
