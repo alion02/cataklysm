@@ -107,7 +107,7 @@ macro_rules! stack {
     };
 }
 
-stack!(stack16, Stack16, u16);
-stack!(stack32, Stack32, u32);
-stack!(stack64, Stack64, u64);
-stack!(stack128, Stack128, u128);
+stack!(capacity16, Stack16, u16);
+stack!(capacity32, Stack32, u32);
+stack!(capacity64, Stack64, u64);
+stack!(capacity128, Stack128, u128);
