@@ -1,4 +1,7 @@
-#![allow(clippy::precedence, clippy::comparison_chain)]
+#![allow(
+	clippy::precedence, // Personal opinion
+	clippy::comparison_chain, // Used to be required for optimal performance; needs retesting
+)]
 
 pub mod game;
 pub mod pair;
