@@ -274,6 +274,8 @@ impl State {
         self.ply < 2
     }
 
+    // Performance experiment: swap C and &mut Self.
+    // Results: insignificant, try again later.
     fn for_actions<B, C>(
         &mut self,
         mut acc: C,
@@ -292,6 +294,8 @@ impl State {
         let is_opening = self.is_opening();
 
         let mut remaining = empty;
+        // Performance experiment: rewrite to while loop.
+        // Results: slight regression.
         loop {
             let sq = sq(remaining.trailing_zeros() as usize);
 
@@ -384,6 +388,8 @@ impl State {
         Continue(acc)
     }
 
+    // Performance experiment: remove undo option (always force undo).
+    // Results: mixed.
     fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
         let mut s = self;
         let color = s.color() ^ s.is_opening();
@@ -501,6 +507,9 @@ impl State {
 
     // Performance experiment: use a Status enum.
     // Results: mixed, try again later.
+
+    // Performance experiment: swap S and &mut Self.
+    // Results: insignificant, try again later.
     fn status<S, R>(
         &mut self,
         state: S,
