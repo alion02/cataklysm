@@ -628,10 +628,6 @@ impl Game for State {
             ),
         }
     }
-
-    fn tinue(&mut self, depth: u32) -> Tinue<Box<dyn crate::game::Action>> {
-        Tinue::Unknown
-    }
 }
 
 #[cfg(test)]

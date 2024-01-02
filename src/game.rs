@@ -56,15 +56,8 @@ pub enum PerftMode {
 
 pub trait Action: Display {}
 
-pub enum Tinue<T> {
-    Some(T),
-    None,
-    Unknown,
-}
-
 pub trait Game {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
-    fn tinue(&mut self, depth: u32) -> Tinue<Box<dyn Action>>;
 }
 
 #[derive(Debug)]
