@@ -499,6 +499,8 @@ impl State {
         r
     }
 
+    // Performance experiment: use a Status enum.
+    // Results: mixed, try again later.
     fn status<S, R>(
         &mut self,
         state: S,

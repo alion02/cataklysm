@@ -1,6 +1,6 @@
 #![allow(
 	clippy::precedence, // Personal opinion
-	clippy::comparison_chain, // Used to be required for optimal performance; needs retesting
+	clippy::comparison_chain, // Required for optimal performance at the time of writing
 )]
 
 pub mod game;
