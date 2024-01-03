@@ -20,6 +20,7 @@ fn main() {
         size: $SIZE:expr,
         row_len: $ROW_LEN:expr,
         bitboard: $Bitboard:ident,
+        bits: $Bits:ident,
         stack: $Stack:ident,
         action: $ActionBacking:ident,
         perft: $PERFT:expr,
@@ -34,6 +35,7 @@ const SIZE: usize = $SIZE;
 const ROW_LEN: usize = $ROW_LEN;
 
 type Bitboard = $Bitboard;
+type Bits = $Bits<1>;
 type Stack = $Stack;
 type ActionBacking = $ActionBacking;
 

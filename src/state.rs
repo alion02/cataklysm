@@ -39,6 +39,7 @@ state!(size3 => State3 {
     size: 3,
     row_len: 4,
     bitboard: u16,
+    bits: Bits16,
     stack: Stack32,
     action: u16,
     perft: [
@@ -57,6 +58,7 @@ state!(size4 => State4 {
     size: 4,
     row_len: 5, // TODO
     bitboard: u32,
+    bits: Bits32,
     stack: Stack32,
     action: u16,
     perft: [
@@ -74,6 +76,7 @@ state!(size5 => State5 {
     size: 5,
     row_len: 6,
     bitboard: u32,
+    bits: Bits32,
     stack: Stack64,
     action: u16,
     perft: [
@@ -90,6 +93,7 @@ state!(size6 => State6 {
     size: 6,
     row_len: 8,
     bitboard: u64,
+    bits: Bits64,
     stack: Stack64,
     action: u16,
     perft: [
@@ -107,6 +111,7 @@ state!(size7 => State7 {
     size: 7,
     row_len: 8,
     bitboard: u64,
+    bits: Bits64,
     stack: Stack128,
     action: u16,
     perft: [
@@ -122,6 +127,7 @@ state!(size8 => State8 {
     size: 8,
     row_len: 9, // TODO
     bitboard: u128,
+    bits: Bits128,
     stack: Stack128,
     action: u32,
     perft: [

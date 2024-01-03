@@ -293,11 +293,10 @@ impl State {
         let has_caps = self.caps_left[color] > 0;
         let is_opening = self.is_opening();
 
-        let mut remaining = empty;
         // Performance experiment: rewrite to while loop.
         // Results: slight regression.
-        loop {
-            let sq = sq(remaining.trailing_zeros() as usize);
+        for i in Bits::new([empty]) {
+            let sq = sq(i as usize);
 
             'skip_nobles: {
                 if has_stones {
@@ -314,20 +313,12 @@ impl State {
                     acc = f(acc, self, Action::place(sq, Piece::Cap))?;
                 }
             }
-
-            remaining &= remaining - 1;
-            if remaining == 0 {
-                break;
-            }
         }
 
         if !is_opening {
-            remaining = own;
-            while remaining != 0 {
-                let src = sq(remaining.trailing_zeros() as usize);
-                let src_bit = remaining & remaining.wrapping_neg();
-
-                let is_cap = src_bit & cap != 0;
+            for i in Bits::new([own]) {
+                let src = sq(i as usize);
+                let is_cap = src.bit() & cap != 0;
 
                 let max_pieces = self.stacks[src].height().min(HAND);
                 let start_bit = 1 << HAND >> max_pieces;
@@ -380,8 +371,6 @@ impl State {
                 acc = spread(acc, Up)?;
                 acc = spread(acc, Left)?;
                 acc = spread(acc, Down)?;
-
-                remaining &= remaining - 1;
             }
         }
 
@@ -660,6 +649,7 @@ const SIZE: usize = 6;
 const ROW_LEN: usize = 8;
 
 type Bitboard = u64;
+type Bits = Bits64<1>;
 type Stack = Stack64;
 type ActionBacking = u16;
 
