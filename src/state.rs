@@ -34,6 +34,7 @@ pub enum Direction {
 
 include!(concat!(env!("OUT_DIR"), "/macro.rs"));
 
+#[cfg(feature = "3")]
 state!(size3 => State3 {
     size: 3,
     row_len: 4,
@@ -51,6 +52,7 @@ state!(size3 => State3 {
     ],
 });
 
+#[cfg(feature = "4")]
 state!(size4 => State4 {
     size: 4,
     row_len: 5, // TODO
@@ -67,6 +69,7 @@ state!(size4 => State4 {
     ],
 });
 
+#[cfg(feature = "5")]
 state!(size5 => State5 {
     size: 5,
     row_len: 6,
@@ -82,6 +85,7 @@ state!(size5 => State5 {
     ],
 });
 
+#[cfg(feature = "6")]
 state!(size6 => State6 {
     size: 6,
     row_len: 8,
@@ -98,6 +102,7 @@ state!(size6 => State6 {
     ],
 });
 
+#[cfg(feature = "7")]
 state!(size7 => State7 {
     size: 7,
     row_len: 8,
@@ -112,6 +117,7 @@ state!(size7 => State7 {
     ],
 });
 
+#[cfg(feature = "8")]
 state!(size8 => State8 {
     size: 8,
     row_len: 9, // TODO

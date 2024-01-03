@@ -72,11 +72,17 @@ impl Error for NewGameError {}
 
 pub fn new_game(opt: Options) -> Result<Box<dyn Game>, NewGameError> {
     Ok(match opt.position.size() {
+        #[cfg(feature = "3")]
         3 => Box::new(State3::new(opt)?),
+        #[cfg(feature = "4")]
         4 => Box::new(State4::new(opt)?),
+        #[cfg(feature = "5")]
         5 => Box::new(State5::new(opt)?),
+        #[cfg(feature = "6")]
         6 => Box::new(State6::new(opt)?),
+        #[cfg(feature = "7")]
         7 => Box::new(State7::new(opt)?),
+        #[cfg(feature = "8")]
         8 => Box::new(State8::new(opt)?),
         _ => return Err(NewGameError),
     })
