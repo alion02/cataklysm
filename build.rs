@@ -16,30 +16,14 @@ fn main() {
     let mut result = String::new();
 
     result += "macro_rules! state {
-    ($mod:ident => $export:ident {
-        size: $SIZE:expr,
-        row_len: $ROW_LEN:expr,
-        bitboard: $Bitboard:ident,
-        bits: $Bits:ident,
-        stack: $Stack:ident,
-        action: $ActionBacking:ident,
-        perft: $PERFT:expr,
-    }) => {
+    ($mod:ident => $export:ident) => {
         pub(crate) use $mod::State as $export;
         mod $mod {";
 
     result += &template;
 
     result += "
-const SIZE: usize = $SIZE;
-const ROW_LEN: usize = $ROW_LEN;
-
-type Bitboard = $Bitboard;
-type Bits = $Bits<1>;
-type Stack = $Stack;
-type ActionBacking = $ActionBacking;
-
-const PERFT: &[(u32, u64)] = &$PERFT;";
+use crate::size::$mod::*;";
 
     result += "
         }

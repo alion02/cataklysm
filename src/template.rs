@@ -645,12 +645,4 @@ mod tests {
 
 // $end_template
 
-const SIZE: usize = 6;
-const ROW_LEN: usize = 8;
-
-type Bitboard = u64;
-type Bits = Bits64<1>;
-type Stack = Stack64;
-type ActionBacking = u16;
-
-const PERFT: &[(u32, u64)] = &[];
+use crate::size::size6::*;
