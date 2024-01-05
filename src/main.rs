@@ -30,9 +30,9 @@ fn main() {
         "search" => {
             let tps = args.next().unwrap();
             let mut game = new_game(Options::from_position(Position::Tps(&tps)).unwrap()).unwrap();
-            for d in 1.. {
+            for d in 0.. {
                 let time = Instant::now();
-                let (score, action) = game.search(d);
+                let (score, _action) = game.search(d);
                 let secs = time.elapsed().as_secs_f64();
 
                 println!("depth {d}: {score} in {secs:.2}s",);
