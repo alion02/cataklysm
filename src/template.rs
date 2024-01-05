@@ -602,10 +602,10 @@ impl State {
 
     fn eval(&self) -> i32 {
         let eval_half =
-            |color| self.stones_left[color] as i32 * -10 + self.count_flats(color) as i32 * 7;
+            |color| self.stones_left[color] as i32 * -20 + self.count_flats(color) as i32 * 14;
 
         let color = self.color();
-        eval_half(color) - eval_half(!color)
+        eval_half(color) - eval_half(!color) + 17
     }
 
     fn search(&mut self, depth: u32, mut alpha: i32, beta: i32) -> (i32, Option<Action>) {
