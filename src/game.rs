@@ -58,6 +58,7 @@ pub trait Action: Display {}
 
 pub trait Game {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
+    fn search(&mut self, depth: u32) -> (i32, Option<Box<dyn Action>>);
 }
 
 #[derive(Debug)]

@@ -132,6 +132,8 @@ fn pat(pat: u32) -> Pattern {
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Action(ActionBacking);
 
+impl crate::game::Action for Action {}
+
 impl Display for Action {
     fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
         todo!()
@@ -597,6 +599,14 @@ impl State {
             },
         )
     }
+
+    fn eval(&self) -> i32 {
+        let eval_half =
+            |color| self.stones_left[color] as i32 * -10 + self.count_flats(color) as i32 * 7;
+
+        let color = self.color();
+        eval_half(color) - eval_half(!color)
+    }
 }
 
 impl Game for State {
@@ -626,6 +636,36 @@ impl Game for State {
                 |_, _| 1,
             ),
         }
+    }
+
+    fn search(&mut self, depth: u32) -> (i32, Option<Box<dyn crate::game::Action>>) {
+        self.status(
+            (),
+            |_, s| {
+                if depth == 0 {
+                    return (s.eval(), None);
+                }
+
+                let (score, action) = s
+                    .for_actions((-100000, None), |(best_score, best_action), s, action| {
+                        let score = -s.with(true, action, |s| s.search(depth - 1)).0;
+                        Continue(if score > best_score {
+                            (score, Some(action))
+                        } else {
+                            (best_score, best_action)
+                        })
+                    })
+                    .into_continue();
+
+                (
+                    score,
+                    action.map(|action| Box::new(action) as Box<dyn crate::game::Action>),
+                )
+            },
+            |_, _| (0, None),
+            |_, s| (100000 - s.ply as i32, None),
+            |_, s| (s.ply as i32 - 100000, None),
+        )
     }
 }
 
