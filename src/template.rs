@@ -607,6 +607,43 @@ impl State {
         let color = self.color();
         eval_half(color) - eval_half(!color)
     }
+
+    fn search(&mut self, depth: u32, mut alpha: i32, beta: i32) -> (i32, Option<Action>) {
+        self.status(
+            (),
+            |_, s| {
+                if depth == 0 {
+                    return (s.eval(), None);
+                }
+
+                let mut best_score = -EVAL_MAX;
+                let mut best_action = None;
+                s.for_actions((), |_, s, action| {
+                    let score = -s
+                        .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                        .0;
+
+                    if score > best_score {
+                        best_score = score;
+                        best_action = Some(action);
+                        if score > alpha {
+                            alpha = score;
+                            if alpha >= beta {
+                                return Break(());
+                            }
+                        }
+                    }
+
+                    Continue(())
+                });
+
+                (best_score, best_action)
+            },
+            |_, _| (0, None),
+            |_, s| (EVAL_MAX - s.ply as i32, None),
+            |_, s| (s.ply as i32 - EVAL_MAX, None),
+        )
+    }
 }
 
 impl Game for State {
@@ -639,33 +676,8 @@ impl Game for State {
     }
 
     fn search(&mut self, depth: u32) -> (i32, Option<Box<dyn crate::game::Action>>) {
-        self.status(
-            (),
-            |_, s| {
-                if depth == 0 {
-                    return (s.eval(), None);
-                }
-
-                let (score, action) = s
-                    .for_actions((-100000, None), |(best_score, best_action), s, action| {
-                        let score = -s.with(true, action, |s| s.search(depth - 1)).0;
-                        Continue(if score > best_score {
-                            (score, Some(action))
-                        } else {
-                            (best_score, best_action)
-                        })
-                    })
-                    .into_continue();
-
-                (
-                    score,
-                    action.map(|action| Box::new(action) as Box<dyn crate::game::Action>),
-                )
-            },
-            |_, _| (0, None),
-            |_, s| (100000 - s.ply as i32, None),
-            |_, s| (s.ply as i32 - 100000, None),
-        )
+        let (score, action) = self.search(depth, -EVAL_DECISIVE, EVAL_DECISIVE);
+        (score, action.map(|action| Box::new(action) as _))
     }
 }
 
