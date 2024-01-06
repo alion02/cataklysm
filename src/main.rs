@@ -30,7 +30,7 @@ fn main() {
         "search" => {
             let tps = args.next().unwrap();
             let mut game = new_game(Options::from_position(Position::Tps(&tps)).unwrap()).unwrap();
-            for d in 0.. {
+            for d in 0..30 {
                 let time = Instant::now();
                 let (score, _action) = game.search(d);
                 let secs = time.elapsed().as_secs_f64();
