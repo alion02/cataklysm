@@ -1,7 +1,7 @@
 #![allow(dead_code, clippy::items_after_test_module)]
 
 use std::{
-    fmt::{self, Display},
+    fmt,
     mem::transmute,
     ops::{
         ControlFlow::{self, *},
@@ -65,6 +65,17 @@ fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Square(usize);
 
+impl fmt::Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{}{}",
+            (b'a' + self.col_index() as u8) as char,
+            self.row_index() + 1,
+        )
+    }
+}
+
 impl<T> Index<Square> for [T] {
     type Output = T;
 
@@ -95,13 +106,23 @@ impl Square {
     }
 
     #[must_use]
+    fn row_index(self) -> usize {
+        self.0 / ROW_LEN
+    }
+
+    #[must_use]
+    fn col_index(self) -> usize {
+        self.0 % ROW_LEN
+    }
+
+    #[must_use]
     fn row(self) -> Self {
-        sq(self.0 / ROW_LEN * ROW_LEN)
+        sq(self.row_index() * ROW_LEN)
     }
 
     #[must_use]
     fn col(self) -> Self {
-        sq(self.0 % ROW_LEN)
+        sq(self.col_index())
     }
 }
 
@@ -134,9 +155,23 @@ struct Action(ActionBacking);
 
 impl crate::game::Action for Action {}
 
-impl Display for Action {
-    fn fmt(&self, _f: &mut fmt::Formatter) -> fmt::Result {
-        todo!()
+impl fmt::Display for Action {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.branch(
+            f,
+            |f| f.write_str("<pass>"),
+            |f, sq, piece| write!(f, "{piece}{sq}"),
+            |f, sq, dir, pat| {
+                let (taken, counts) = pat.execute();
+                if taken == 1 {
+                    write!(f, "{sq}{dir}")
+                } else if counts.count() == 1 {
+                    write!(f, "{taken}{sq}{dir}")
+                } else {
+                    write!(f, "{taken}{sq}{dir}{counts}")
+                }
+            },
+        )
     }
 }
 

@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Hand(u32);
 
@@ -10,6 +12,18 @@ impl Hand {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct DropCounts(pub u32);
+
+impl fmt::Display for DropCounts {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.clone().try_for_each(|count| {
+            if count < 10 {
+                write!(f, "{}", (b'0' + count as u8) as char)
+            } else {
+                write!(f, "({count})")
+            }
+        })
+    }
+}
 
 impl Iterator for DropCounts {
     type Item = u32;
