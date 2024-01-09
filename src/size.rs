@@ -6,8 +6,8 @@ pub mod size3 {
     pub const SIZE: usize = 3;
     pub const ROW_LEN: usize = 4;
 
-    pub type Bitboard = u16;
-    pub type Bits = Bits16<1>;
+    pub type Bitboard = u32;
+    pub type Bits = Bits32<1>;
     pub type Stack = Stack32;
     pub type ActionBacking = u16;
 
