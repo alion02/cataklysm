@@ -338,8 +338,11 @@ impl State {
             let mut for_placements = {
                 #[inline(always)]
                 |acc, piece| {
-                    bit_squares(empty)
-                        .try_fold(acc, |acc, sq| f(acc, self, Action::place(sq, piece)))
+                    bit_squares(empty).try_fold(
+                        acc,
+                        #[inline(always)]
+                        |acc, sq| f(acc, self, Action::place(sq, piece)),
+                    )
                 }
             };
 
