@@ -133,6 +133,10 @@ fn sq(sq: usize) -> Square {
     Square(sq)
 }
 
+fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
+    Bits::new([bitboard]).map(|s| sq(s as usize))
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 struct Pattern(u32);
 
@@ -332,9 +336,7 @@ impl State {
 
         // Performance experiment: rewrite to while loop.
         // Results: slight regression.
-        for i in Bits::new([empty]) {
-            let sq = sq(i as usize);
-
+        for sq in bit_squares(empty) {
             'skip_nobles: {
                 if has_stones {
                     acc = f(acc, self, Action::place(sq, Piece::Flat))?;
@@ -353,8 +355,7 @@ impl State {
         }
 
         if !is_opening {
-            for i in Bits::new([own]) {
-                let src = sq(i as usize);
+            for src in bit_squares(own) {
                 let is_cap = src.bit() & cap != 0;
 
                 let max_pieces = self.stacks[src].height().min(HAND);
