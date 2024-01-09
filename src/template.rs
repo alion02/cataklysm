@@ -334,23 +334,27 @@ impl State {
         let has_caps = self.caps_left[color] > 0;
         let is_opening = self.is_opening();
 
-        // Performance experiment: rewrite to while loop.
-        // Results: slight regression.
-        for sq in bit_squares(empty) {
-            'skip_nobles: {
-                if has_stones {
-                    acc = f(acc, self, Action::place(sq, Piece::Flat))?;
+        'skip_nobles: {
+            let mut for_placements = {
+                #[inline(always)]
+                |acc, piece| {
+                    bit_squares(empty)
+                        .try_fold(acc, |acc, sq| f(acc, self, Action::place(sq, piece)))
+                }
+            };
 
-                    if is_opening {
-                        break 'skip_nobles;
-                    }
+            if has_stones {
+                acc = for_placements(acc, Piece::Flat)?;
 
-                    acc = f(acc, self, Action::place(sq, Piece::Wall))?;
+                if is_opening {
+                    break 'skip_nobles;
                 }
 
-                if has_caps {
-                    acc = f(acc, self, Action::place(sq, Piece::Cap))?;
-                }
+                acc = for_placements(acc, Piece::Wall)?;
+            }
+
+            if has_caps {
+                acc = for_placements(acc, Piece::Cap)?;
             }
         }
 
