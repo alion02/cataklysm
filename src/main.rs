@@ -1,6 +1,6 @@
 use std::{env::args, time::Instant};
 
-use takkit::game::*;
+use cataklysm::game::*;
 
 fn main() {
     let mut args = args();

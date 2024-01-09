@@ -1,3 +1,3 @@
-# Takkit
+# cataklysm
 
-An extremely fast Tinuë finder for the board game of [Tak](https://boardgamegeek.com/boardgame/197405/tak).
+An up-and-coming alpha-beta bot for the board game of [Tak](https://boardgamegeek.com/boardgame/197405/tak).
