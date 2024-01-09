@@ -57,9 +57,6 @@ impl fmt::Display for Direction {
 
 include!(concat!(env!("OUT_DIR"), "/macro.rs"));
 
-pub const EVAL_DECISIVE: i32 = 1 << 16;
-pub const EVAL_MAX: i32 = 1 << 24;
-
 #[cfg(feature = "3")]
 state!(size3 => State3);
 

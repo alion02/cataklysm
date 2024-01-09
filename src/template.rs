@@ -643,15 +643,15 @@ impl State {
         )
     }
 
-    fn eval(&self) -> i32 {
+    fn eval(&self) -> Eval {
         let eval_half =
             |color| self.stones_left[color] as i32 * -20 + self.count_flats(color) as i32 * 14;
 
         let color = self.color();
-        eval_half(color) - eval_half(!color) + 17
+        Eval::new(eval_half(color) - eval_half(!color) + 17)
     }
 
-    fn search(&mut self, depth: u32, mut alpha: i32, beta: i32) -> (i32, Option<Action>) {
+    fn search(&mut self, depth: u32, mut alpha: Eval, beta: Eval) -> (Eval, Option<Action>) {
         self.status(
             (),
             |_, s| {
@@ -659,7 +659,7 @@ impl State {
                     return (s.eval(), None);
                 }
 
-                let mut best_score = -EVAL_MAX;
+                let mut best_score = -Eval::MAX;
                 let mut best_action = None;
                 s.for_actions((), |_, s, action| {
                     let score = -s
@@ -682,9 +682,9 @@ impl State {
 
                 (best_score, best_action)
             },
-            |_, _| (0, None),
-            |_, s| (EVAL_MAX - s.ply as i32, None),
-            |_, s| (s.ply as i32 - EVAL_MAX, None),
+            |_, _| (Eval::ZERO, None),
+            |_, s| (Eval::win(s.ply), None),
+            |_, s| (Eval::loss(s.ply), None),
         )
     }
 }
@@ -718,8 +718,8 @@ impl Game for State {
         }
     }
 
-    fn search(&mut self, depth: u32) -> (i32, Option<Box<dyn crate::game::Action>>) {
-        let (score, action) = self.search(depth, -EVAL_DECISIVE, EVAL_DECISIVE);
+    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
+        let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
         (score, action.map(|action| Box::new(action) as _))
     }
 }

@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::{error::Error, fmt, ops::Neg};
 
 use crate::{pair::Pair, state::*};
 
@@ -54,18 +54,78 @@ pub enum PerftMode {
     Batch,
 }
 
-pub trait Action: Display {}
+pub trait Action: fmt::Display {}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Eval(i32);
+
+impl fmt::Display for Eval {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if self.is_decisive() {
+            let move_number = (Self::MAX.0 - self.0.abs()) / 2 + 1;
+            if *self > Self::ZERO {
+                write!(f, "win on {move_number}")
+            } else {
+                write!(f, "loss on {move_number}")
+            }
+        } else {
+            write!(f, "{:+}", self.0)
+        }
+    }
+}
+
+impl Neg for Eval {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        Self(-self.0)
+    }
+}
+
+impl Eval {
+    pub const ZERO: Self = Self(0);
+    pub const DECISIVE: Self = Self(1 << 16);
+    pub const MAX: Self = Self(1 << 24);
+
+    #[inline(always)]
+    pub fn new(value: i32) -> Self {
+        let eval = Self(value);
+        debug_assert!(eval.abs() <= Self::MAX);
+        eval
+    }
+
+    #[inline(always)]
+    pub fn win(ply: u32) -> Eval {
+        Self::new(Self::MAX.0 - ply as i32)
+    }
+
+    #[inline(always)]
+    pub fn loss(ply: u32) -> Eval {
+        Self::new(ply as i32 - Self::MAX.0)
+    }
+
+    #[inline(always)]
+    pub fn is_decisive(self) -> bool {
+        self.abs() >= Self::DECISIVE
+    }
+
+    #[inline(always)]
+    pub fn abs(self) -> Self {
+        Self(self.0.abs())
+    }
+}
 
 pub trait Game {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
-    fn search(&mut self, depth: u32) -> (i32, Option<Box<dyn Action>>);
+    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
 }
 
 #[derive(Debug)]
 pub struct NewGameError;
 
-impl Display for NewGameError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for NewGameError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "error instantiating a game")
     }
 }

@@ -6,5 +6,3 @@ An up-and-coming alpha-beta bot for the board game of [Tak](https://boardgamegee
 
 - `cargo r -r -- search "<tps>"` to evaluate a position
 - `cargo r -r -- perft "<tps>"` to get perft numbers for a position
-
-Positive values mean good for the current player. Very large absolute values mean a forced win.
