@@ -62,7 +62,7 @@ pub struct Eval(i32);
 impl fmt::Display for Eval {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if self.is_decisive() {
-            let move_number = (Self::MAX.0 - self.0.abs()) / 2 + 1;
+            let move_number = (Self::MAX.0 - self.0.abs() + 1) / 2;
             if *self > Self::ZERO {
                 write!(f, "win on {move_number}")
             } else {
