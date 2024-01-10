@@ -15,6 +15,7 @@ pub struct Pair<T> {
 impl<T> Index<bool> for Pair<T> {
     type Output = T;
 
+    #[inline(always)]
     fn index(&self, index: bool) -> &T {
         match index {
             WHITE => &self.white,
@@ -24,6 +25,7 @@ impl<T> Index<bool> for Pair<T> {
 }
 
 impl<T> IndexMut<bool> for Pair<T> {
+    #[inline(always)]
     fn index_mut(&mut self, index: bool) -> &mut T {
         match index {
             WHITE => &mut self.white,
