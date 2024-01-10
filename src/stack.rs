@@ -47,6 +47,22 @@ impl Iterator for DropCounts {
         let c = self.count();
         (c, Some(c))
     }
+
+    #[inline(always)]
+    fn last(mut self) -> Option<Self::Item> {
+        self.next_back()
+    }
+}
+
+impl DoubleEndedIterator for DropCounts {
+    #[inline(always)]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        (self.0 != 0).then(|| {
+            let t = self.0.leading_zeros();
+            self.0 &= !1u32.rotate_left(t);
+            self.0.leading_zeros() - t
+        })
+    }
 }
 
 macro_rules! stack {

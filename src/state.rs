@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, mem::transmute, ops::Neg};
 
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -33,6 +33,11 @@ impl Piece {
     pub fn is_stone(self) -> bool {
         self != Self::Cap
     }
+
+    #[inline(always)]
+    pub fn is_flat(self) -> bool {
+        self == Self::Flat
+    }
 }
 
 #[repr(u32)]
@@ -52,6 +57,23 @@ impl fmt::Display for Direction {
             Self::Left => "<",
             Self::Down => "-",
         })
+    }
+}
+
+impl Neg for Direction {
+    type Output = Self;
+
+    #[inline(always)]
+    fn neg(self) -> Self::Output {
+        // Generates a lookup table
+        // match self {
+        //     Self::Right => Self::Left,
+        //     Self::Up => Self::Down,
+        //     Self::Left => Self::Right,
+        //     Self::Down => Self::Up,
+        // }
+
+        unsafe { transmute(self as u32 ^ 2) }
     }
 }
 

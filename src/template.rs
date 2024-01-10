@@ -96,12 +96,12 @@ impl Square {
     }
 
     #[must_use]
-    fn shift(self, dir: Direction) -> Self {
+    fn shift(self, amount: usize, dir: Direction) -> Self {
         sq(match dir {
-            Right => self.0 + 1,
-            Up => self.0 + ROW_LEN,
-            Left => self.0 - 1,
-            Down => self.0 - ROW_LEN,
+            Right => self.0 + amount,
+            Up => self.0 + amount * ROW_LEN,
+            Left => self.0 - amount,
+            Down => self.0 - amount * ROW_LEN,
         })
     }
 
@@ -143,6 +143,7 @@ struct Pattern(u32);
 impl Pattern {
     fn execute(self) -> (u32, DropCounts) {
         let mut dc = DropCounts(self.0 | 1 << HAND);
+        // TODO: Investigate unwrap
         (HAND - dc.next().unwrap(), dc)
     }
 }
@@ -499,7 +500,7 @@ impl State {
                 s.block[color] &= !bit;
 
                 for count in counts {
-                    sq = sq.shift(dir);
+                    sq = sq.shift(1, dir);
                     bit = sq.bit();
 
                     s.stacks[sq].drop(&mut hand, count);
@@ -622,13 +623,16 @@ impl State {
         (self.road[color] & !self.block[color]).count_ones()
     }
 
+    /// Assumes that there exists at least one [`State`] for which the [`Action`] is valid.
     fn is_legal(&self, action: Action) -> bool {
         let color = self.color();
+        let opening = self.is_opening();
         action.branch(
             (),
             |_| false,
             |_, sq, piece| {
-                self.stacks[sq].is_empty()
+                (!opening || piece.is_flat())
+                    && self.stacks[sq].is_empty()
                     && if piece.is_stone() {
                         self.stones_left[color] != 0
                     } else {
@@ -636,9 +640,27 @@ impl State {
                     }
             },
             |_, sq, dir, pat| {
-                let (taken, counts) = pat.execute();
-                self.stacks[sq].height() >= taken
-                // TODO
+                !opening && {
+                    let (taken, counts) = pat.execute();
+                    self.stacks[sq].height() >= taken && {
+                        let range = counts.count();
+                        let end_sq = sq.shift(range, dir);
+
+                        let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
+                        let span = span_exclusive | end_sq.bit();
+
+                        let block = self.block.white | self.block.black;
+
+                        // TODO: Investigate unwrap
+                        span & block == 0
+                            || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
+                                let road = self.road.white | self.road.black;
+                                let cap = road & block;
+
+                                cap & end_sq.bit() == 0 && cap & sq.bit() != 0
+                            }
+                    }
+                }
             },
         )
     }
