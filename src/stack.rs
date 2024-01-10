@@ -59,8 +59,8 @@ impl DoubleEndedIterator for DropCounts {
     fn next_back(&mut self) -> Option<Self::Item> {
         (self.0 != 0).then(|| {
             let t = self.0.leading_zeros();
-            self.0 &= !1u32.rotate_left(t);
-            self.0.leading_zeros() - t
+            self.0 &= !1 << t ^ u32::BITS - 1;
+            (self.0 | 1).leading_zeros() - t
         })
     }
 }
