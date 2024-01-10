@@ -228,6 +228,7 @@ impl Action {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct State {
     road: Pair<Bitboard>,
     block: Pair<Bitboard>,
@@ -428,7 +429,7 @@ impl State {
         let mut s = self;
         let color = s.color() ^ s.is_opening();
 
-        debug_assert!(s.is_legal(action));
+        debug_assert!(s.is_legal(action), "{action} for {s:?}");
 
         s.ply += 1;
 
