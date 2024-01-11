@@ -9,7 +9,7 @@ use std::{
     },
 };
 
-use crate::{game::*, pair::*, stack::*, state::*, util::*};
+use crate::{game::*, hash::*, pair::*, stack::*, state::*, util::*};
 use Direction::*;
 
 const HAND: u32 = SIZE as u32;
@@ -237,8 +237,10 @@ pub struct State {
     caps_left: Pair<u32>,
 
     ply: u32,
+    last_reversible: u32,
 
     stacks: [Stack; ARR_LEN],
+    hashes: Pair<[Hash; HIST_LEN]>,
 }
 
 impl Default for State {
@@ -305,7 +307,9 @@ impl State {
             stones_left,
             caps_left,
             ply,
+            last_reversible: 0,
             stacks,
+            hashes: Pair::default(),
         })
     }
 

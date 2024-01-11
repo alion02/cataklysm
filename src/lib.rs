@@ -4,6 +4,7 @@
 )]
 
 pub mod game;
+pub mod hash;
 pub mod pair;
 pub mod size;
 pub mod stack;
