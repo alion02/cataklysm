@@ -492,7 +492,7 @@ impl State {
                 let mut hand = s.stacks[sq].take(taken);
                 let top = s.stacks[sq].top();
 
-                if top.is_none() | top.is_some_and(|new_color| new_color != color) {
+                if top.map(|new_color| new_color != color).unwrap_or(true) {
                     s.road[color] &= !bit;
                 }
                 if let Some(new_color) = top {
