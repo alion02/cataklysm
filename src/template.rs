@@ -7,10 +7,33 @@ use std::{
         ControlFlow::{self, *},
         Index, IndexMut,
     },
+    sync::Mutex,
 };
+
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 
 use crate::{game::*, hash::*, pair::*, stack::*, state::*, util::*};
 use Direction::*;
+
+static INIT: Mutex<bool> = Mutex::new(false);
+
+static mut HASH_WALL: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
+static mut HASH_CAP: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
+
+fn init() {
+    let mut init = INIT.lock().unwrap();
+    if !*init {
+        let mut rng = ChaCha20Rng::seed_from_u64(0);
+
+        unsafe {
+            HASH_WALL.iter_mut().for_each(|h| *h = rng.gen());
+            HASH_CAP.iter_mut().for_each(|h| *h = rng.gen());
+        }
+
+        *init = true;
+    }
+}
 
 const HAND: u32 = SIZE as u32;
 
@@ -251,6 +274,8 @@ impl Default for State {
 
 impl State {
     pub(crate) fn new(opt: Options) -> Result<Self, NewGameError> {
+        init();
+
         let mut road = Pair::both(0);
         let mut block = Pair::both(0);
         let mut stones_left = opt.start_stones;
