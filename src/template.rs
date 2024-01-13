@@ -332,7 +332,7 @@ impl State {
             stones_left,
             caps_left,
             ply,
-            last_reversible: 0,
+            last_reversible: ply,
             stacks,
             hashes: Pair::default(),
         })
