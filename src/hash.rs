@@ -1,3 +1,5 @@
+use std::ops::{BitXor, BitXorAssign};
+
 use rand::{
     distributions::{Distribution, Standard},
     prelude::Rng,
@@ -10,10 +12,22 @@ pub struct Hash(u64);
 
 impl Hash {
     pub const ZERO: Self = Self(0);
+    pub const SIDE_TO_MOVE: Self = Self(0xf812ec2e34a9c388); // 1815ad0c9e50c110
+}
+
+impl BitXor for Hash {
+    type Output = Hash;
 
     #[inline(always)]
-    pub fn xor(self, other: Self) -> Self {
-        Self(self.0 ^ other.0)
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl BitXorAssign for Hash {
+    #[inline(always)]
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
     }
 }
 

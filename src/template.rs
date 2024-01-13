@@ -20,6 +20,8 @@ static INIT: Mutex<bool> = Mutex::new(false);
 
 static mut HASH_WALL: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
 static mut HASH_CAP: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
+static mut HASH_STACK: [[[Hash; (2 << HAND) - 1]; (Stack::CAPACITY - HAND) as usize]; ARR_LEN] =
+    [[[Hash::ZERO; (2 << HAND) - 1]; (Stack::CAPACITY - HAND) as usize]; ARR_LEN];
 
 fn init() {
     let mut init = INIT.lock().unwrap();
@@ -29,6 +31,8 @@ fn init() {
         unsafe {
             HASH_WALL.iter_mut().for_each(|h| *h = rng.gen());
             HASH_CAP.iter_mut().for_each(|h| *h = rng.gen());
+
+            // TODO HASH_STACK
         }
 
         *init = true;
@@ -346,6 +350,11 @@ impl State {
         self.ply < 2
     }
 
+    fn hash_mut(&mut self) -> &mut Hash {
+        let color = self.color();
+        &mut self.hashes[color][self.ply as usize % 2 / HIST_LEN]
+    }
+
     // Performance experiment: swap C and &mut Self.
     // Results: insignificant, try again later.
     fn for_actions<B, C>(
@@ -460,6 +469,8 @@ impl State {
 
         debug_assert!(s.is_legal(action), "{action} for {s:?}");
 
+        let mut hash = *s.hash_mut() ^ Hash::SIDE_TO_MOVE;
+
         s.ply += 1;
 
         let r = action.branch(
@@ -474,6 +485,12 @@ impl State {
 
                 if piece.is_block() {
                     s.block[color] ^= bit;
+
+                    if piece.is_road() {
+                        hash ^= unsafe { HASH_CAP }[sq];
+                    } else {
+                        hash ^= unsafe { HASH_WALL }[sq];
+                    }
                 }
 
                 if piece.is_stone() {
@@ -483,6 +500,8 @@ impl State {
                 }
 
                 s.stacks[sq] = Stack::one_tall(color);
+
+                *s.hash_mut() = hash ^ unsafe { HASH_STACK }[sq][0][s.stacks[sq].raw() as usize];
 
                 let r = f(s);
 

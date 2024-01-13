@@ -85,7 +85,12 @@ macro_rules! stack {
 
             impl Stack {
                 pub const EMPTY: Self = Self(1);
-                const CAPACITY: u32 = StackBacking::BITS - 1;
+                pub const CAPACITY: u32 = StackBacking::BITS - 1;
+
+                #[inline(always)]
+                pub fn raw(self) -> StackBacking {
+                    self.0
+                }
 
                 #[inline(always)]
                 pub fn one_tall(color: bool) -> Self {
