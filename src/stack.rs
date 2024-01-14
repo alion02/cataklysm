@@ -100,6 +100,14 @@ macro_rules! stack {
                     Self(backing)
                 }
 
+                /// # Note
+                /// The returned [`Stack`] may be nonsensical if `hand` contains more pieces than `count`.
+                #[inline(always)]
+                pub fn from_hand_and_count(hand: Hand, count: u32) -> Self {
+                    debug_assert!(count > 0);
+                    Self((1 | hand.0).rotate_left(count) as _)
+                }
+
                 #[inline(always)]
                 pub fn one_tall(color: bool) -> Self {
                     Self(0b10 | color as StackBacking)

@@ -44,9 +44,7 @@ fn init() {
                         } else {
                             // Combine hashes
                             let mut stack = Stack::from_raw(k as _);
-                            let mut hand = stack.take(1);
-                            let mut top = Stack::EMPTY;
-                            top.drop(&mut hand, 1);
+                            let top = Stack::from_hand_and_count(stack.take(1), 1);
 
                             HASH_STACK[i][j][stack.raw() as usize]
                                 ^ HASH_STACK[i][j + stack.height() as usize][top.raw() as usize]
