@@ -488,14 +488,14 @@ impl State {
 
         debug_assert!(s.is_legal(action), "{action} for {s:?}");
 
-        let mut hash = *s.hash_mut() ^ Hash::SIDE_TO_MOVE;
+        let hash = *s.hash_mut() ^ Hash::SIDE_TO_MOVE;
 
         s.ply += 1;
 
         let r = action.branch(
-            (&mut s, f),
-            |(s, f)| f(s),
-            |(s, f), sq, piece| {
+            (&mut s, hash, f),
+            |(s, _, f)| f(s),
+            |(s, mut hash, f), sq, piece| {
                 let bit = sq.bit();
 
                 if piece.is_road() {
@@ -505,11 +505,11 @@ impl State {
                 if piece.is_block() {
                     s.block[color] ^= bit;
 
-                    if piece.is_road() {
-                        hash ^= unsafe { HASH_CAP }[sq];
+                    hash ^= if piece.is_road() {
+                        unsafe { HASH_CAP }
                     } else {
-                        hash ^= unsafe { HASH_WALL }[sq];
-                    }
+                        unsafe { HASH_WALL }
+                    }[sq];
                 }
 
                 if piece.is_stone() {
@@ -520,8 +520,9 @@ impl State {
 
                 s.stacks[sq] = Stack::one_tall(color);
 
-                *s.hash_mut() = hash ^ unsafe { HASH_STACK }[sq][0][s.stacks[sq].raw() as usize];
+                hash ^= unsafe { HASH_STACK }[sq][0][s.stacks[sq].raw() as usize];
 
+                *s.hash_mut() = hash;
                 let r = f(s);
 
                 if undo {
@@ -544,7 +545,7 @@ impl State {
 
                 r
             },
-            |(s, f), mut sq, dir, pat| {
+            |(s, mut hash, f), mut sq, dir, pat| {
                 let mut bit = sq.bit();
 
                 let road = s.road;
@@ -557,6 +558,11 @@ impl State {
                 let (taken, counts) = pat.execute();
 
                 let mut hand = s.stacks[sq].take(taken);
+
+                // TODO: Inspect bounds checks
+                hash ^= unsafe { HASH_STACK }[sq][s.stacks[sq].height() as usize]
+                    [Stack::from_hand_and_count(hand, taken).raw() as usize];
+
                 let top = s.stacks[sq].top();
 
                 if top.map(|new_color| new_color != color).unwrap_or(true) {
@@ -565,11 +571,27 @@ impl State {
                 if let Some(new_color) = top {
                     s.road[new_color] |= bit;
                 }
-                s.block[color] &= !bit;
+
+                if is_block {
+                    s.block[color] &= !bit;
+
+                    hash ^= if is_road {
+                        unsafe { HASH_CAP }
+                    } else {
+                        unsafe { HASH_WALL }
+                    }[sq];
+                }
 
                 for count in counts {
                     sq = sq.shift(1, dir);
                     bit = sq.bit();
+
+                    // TODO: Inspect bounds checks
+                    // FIXME: This is not good
+                    // - manually masks off the garbage bits with a magic number
+                    // - doesn't reuse data computed within the following .drop()
+                    hash ^= unsafe { HASH_STACK }[sq][s.stacks[sq].height() as usize]
+                        [(Stack::from_hand_and_count(hand, count).raw() & 0x1FF) as usize];
 
                     s.stacks[sq].drop(&mut hand, count);
 
@@ -581,13 +603,18 @@ impl State {
 
                 if is_block {
                     if is_road {
+                        // Maybe smash opponent wall
+                        // No need to unset block if smashing own wall
                         s.block[!color] &= !bit;
                     } else {
+                        // Unset own road bit, which was speculatively set in the loop
+                        // Opponent's bit has already been unset in the loop
                         s.road[color] &= !bit;
                     }
                     s.block[color] |= bit;
                 }
 
+                *s.hash_mut() = hash;
                 let r = f(s);
 
                 if undo {
