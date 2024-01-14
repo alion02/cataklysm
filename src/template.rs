@@ -20,8 +20,8 @@ static INIT: Mutex<bool> = Mutex::new(false);
 
 static mut HASH_WALL: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
 static mut HASH_CAP: [Hash; ARR_LEN] = [Hash::ZERO; ARR_LEN];
-static mut HASH_STACK: [[[Hash; 2 << HAND]; (Stack::CAPACITY - HAND) as usize]; ARR_LEN] =
-    [[[Hash::ZERO; 2 << HAND]; (Stack::CAPACITY - HAND) as usize]; ARR_LEN];
+static mut HASH_STACK: [[[Hash; 2 << HAND]; Stack::CAPACITY as usize]; ARR_LEN] =
+    [[[Hash::ZERO; 2 << HAND]; Stack::CAPACITY as usize]; ARR_LEN];
 
 fn init() {
     let mut init = INIT.lock().unwrap();
@@ -46,8 +46,13 @@ fn init() {
                             let mut stack = Stack::from_raw(k as _);
                             let top = Stack::from_hand_and_count(stack.take(1), 1);
 
+                            let top_j = j + stack.height() as usize;
+                            if top_j >= HASH_STACK[i].len() {
+                                continue;
+                            }
+
                             HASH_STACK[i][j][stack.raw() as usize]
-                                ^ HASH_STACK[i][j + stack.height() as usize][top.raw() as usize]
+                                ^ HASH_STACK[i][top_j][top.raw() as usize]
                         };
                     }
                 }
