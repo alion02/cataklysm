@@ -373,7 +373,7 @@ impl State {
 
     fn hash_mut(&mut self) -> &mut Hash {
         let color = self.color();
-        &mut self.hashes[color][self.ply as usize % 2 / HIST_LEN]
+        &mut self.hashes[color][self.ply as usize / 2 % HIST_LEN]
     }
 
     // Performance experiment: swap C and &mut Self.
