@@ -92,6 +92,14 @@ macro_rules! stack {
                     self.0
                 }
 
+                /// # Safety
+                /// `backing` must be nonzero.
+                #[inline(always)]
+                pub unsafe fn from_raw(backing: StackBacking) -> Self {
+                    debug_assert!(backing > 0);
+                    Self(backing)
+                }
+
                 #[inline(always)]
                 pub fn one_tall(color: bool) -> Self {
                     Self(0b10 | color as StackBacking)
