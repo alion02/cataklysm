@@ -511,10 +511,10 @@ impl State {
                     s.block[color] ^= bit;
 
                     hash ^= if piece.is_road() {
-                        unsafe { HASH_CAP }
+                        unsafe { HASH_CAP[sq] }
                     } else {
-                        unsafe { HASH_WALL }
-                    }[sq];
+                        unsafe { HASH_WALL[sq] }
+                    };
                 }
 
                 if piece.is_stone() {
@@ -525,7 +525,7 @@ impl State {
 
                 s.stacks[sq] = Stack::one_tall(color);
 
-                hash ^= unsafe { HASH_STACK }[sq][0][s.stacks[sq].raw() as usize];
+                hash ^= unsafe { HASH_STACK[sq][0][s.stacks[sq].raw() as usize] };
 
                 *s.hash_mut() = hash;
                 let r = f(s);
@@ -565,8 +565,10 @@ impl State {
                 let mut hand = s.stacks[sq].take(taken);
 
                 // TODO: Inspect bounds checks
-                hash ^= unsafe { HASH_STACK }[sq][s.stacks[sq].height() as usize]
-                    [Stack::from_hand_and_count(hand, taken).raw() as usize];
+                hash ^= unsafe {
+                    HASH_STACK[sq][s.stacks[sq].height() as usize]
+                        [Stack::from_hand_and_count(hand, taken).raw() as usize]
+                };
 
                 let top = s.stacks[sq].top();
 
@@ -581,10 +583,10 @@ impl State {
                     s.block[color] &= !bit;
 
                     hash ^= if is_road {
-                        unsafe { HASH_CAP }
+                        unsafe { HASH_CAP[sq] }
                     } else {
-                        unsafe { HASH_WALL }
-                    }[sq];
+                        unsafe { HASH_WALL[sq] }
+                    };
                 }
 
                 for count in counts {
@@ -595,8 +597,10 @@ impl State {
                     // FIXME: This is not good
                     // - manually masks off the garbage bits with a magic number
                     // - doesn't reuse data computed within the following .drop()
-                    hash ^= unsafe { HASH_STACK }[sq][s.stacks[sq].height() as usize]
-                        [(Stack::from_hand_and_count(hand, count).raw() & 0x1FF) as usize];
+                    hash ^= unsafe {
+                        HASH_STACK[sq][s.stacks[sq].height() as usize]
+                            [(Stack::from_hand_and_count(hand, count).raw() & 0x1FF) as usize]
+                    };
 
                     s.stacks[sq].drop(&mut hand, count);
 
