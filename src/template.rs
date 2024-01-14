@@ -612,13 +612,21 @@ impl State {
 
                 if is_block {
                     if is_road {
+                        if (s.block.white | s.block.black) & bit != 0 {
+                            hash ^= unsafe { HASH_WALL[sq] };
+                        }
+
                         // Maybe smash opponent wall
                         // No need to unset block if smashing own wall
                         s.block[!color] &= !bit;
+
+                        hash ^= unsafe { HASH_CAP[sq] };
                     } else {
                         // Unset own road bit, which was speculatively set in the loop
                         // Opponent's bit has already been unset in the loop
                         s.road[color] &= !bit;
+
+                        hash ^= unsafe { HASH_WALL[sq] };
                     }
                     s.block[color] |= bit;
                 }
