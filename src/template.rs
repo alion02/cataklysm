@@ -856,7 +856,7 @@ impl State {
                 };
 
                 'ret: {
-                    if depth > 1 && s.is_legal(killer) && f((), s, killer).is_break() {
+                    if s.is_legal(killer) && f((), s, killer).is_break() {
                         break 'ret;
                     }
 
