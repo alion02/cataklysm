@@ -746,17 +746,6 @@ impl State {
 
     /// Assumes that there exists at least one [`State`] for which the [`Action`] is valid.
     fn is_legal(&mut self, action: Action) -> bool {
-        #[cfg(debug_assertions)]
-        let naive = self
-            .for_actions((), |_, _, other| {
-                if action == other {
-                    Break(())
-                } else {
-                    Continue(())
-                }
-            })
-            .is_break();
-
         let color = self.color();
         let opening = self.is_opening();
         let clever = action.branch(
@@ -798,7 +787,18 @@ impl State {
             },
         );
 
-        debug_assert_eq!(naive, clever, "{action} is legal({clever}) for {self:?}");
+        debug_assert_eq!(
+            self.for_actions((), |_, _, other| {
+                if action == other {
+                    Break(())
+                } else {
+                    Continue(())
+                }
+            })
+            .is_break(),
+            clever,
+            "{action} is legal({clever}) for {self:?}"
+        );
         clever
     }
 
