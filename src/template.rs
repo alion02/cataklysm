@@ -746,52 +746,58 @@ impl State {
 
     /// Assumes that there exists at least one [`State`] for which the [`Action`] is valid.
     fn is_legal(&mut self, action: Action) -> bool {
-        self.for_actions((), |_, _, other| {
-            if action == other {
-                Break(())
-            } else {
-                Continue(())
-            }
-        })
-        .is_break()
-        // let color = self.color();
-        // let opening = self.is_opening();
-        // action.branch(
-        //     (),
-        //     |_| false,
-        //     |_, sq, piece| {
-        //         (!opening || piece.is_flat())
-        //             && self.stacks[sq].is_empty()
-        //             && if piece.is_stone() {
-        //                 self.stones_left[color] != 0
-        //             } else {
-        //                 self.caps_left[color] != 0
-        //             }
-        //     },
-        //     |_, sq, dir, pat| {
-        //         !opening && {
-        //             let (taken, counts) = pat.execute();
-        //             self.stacks[sq].height() >= taken && {
-        //                 let range = counts.count();
-        //                 let end_sq = sq.shift(range, dir);
+        #[cfg(debug_assertions)]
+        let naive = self
+            .for_actions((), |_, _, other| {
+                if action == other {
+                    Break(())
+                } else {
+                    Continue(())
+                }
+            })
+            .is_break();
 
-        //                 let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
-        //                 let span = span_exclusive | end_sq.bit();
+        let color = self.color();
+        let opening = self.is_opening();
+        let clever = action.branch(
+            (),
+            |_| false,
+            |_, sq, piece| {
+                (!opening || piece.is_flat())
+                    && self.stacks[sq].is_empty()
+                    && if piece.is_stone() {
+                        self.stones_left[color] != 0
+                    } else {
+                        self.caps_left[color] != 0
+                    }
+            },
+            |_, sq, dir, pat| {
+                !opening && {
+                    let (taken, counts) = pat.execute();
+                    self.stacks[sq].height() >= taken && {
+                        let range = counts.count();
+                        let end_sq = sq.shift(range, dir);
 
-        //                 let block = self.block.white | self.block.black;
+                        let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
+                        let span = span_exclusive | end_sq.bit();
 
-        //                 // TODO: Investigate unwrap
-        //                 span & block == 0
-        //                     || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
-        //                         let road = self.road.white | self.road.black;
-        //                         let cap = road & block;
+                        let block = self.block.white | self.block.black;
 
-        //                         cap & end_sq.bit() == 0 && cap & sq.bit() != 0
-        //                     }
-        //             }
-        //         }
-        //     },
-        // )
+                        // TODO: Investigate unwrap
+                        span & block == 0
+                            || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
+                                let road = self.road.white | self.road.black;
+                                let cap = road & block;
+
+                                cap & end_sq.bit() == 0 && cap & sq.bit() != 0
+                            }
+                    }
+                }
+            },
+        );
+
+        debug_assert_eq!(naive, clever, "{action} is legal({clever}) for {self:?}");
+        clever
     }
 
     fn eval(&self) -> Eval {
