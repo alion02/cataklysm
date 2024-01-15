@@ -774,24 +774,26 @@ impl State {
             |_, sq, dir, pat| {
                 !opening && {
                     let (taken, counts) = pat.execute();
-                    self.stacks[sq].height() >= taken && {
-                        let range = counts.count();
-                        let end_sq = sq.shift(range, dir);
+                    self.stacks[sq].height() >= taken
+                        && self.stacks[sq].top_unchecked() == color
+                        && {
+                            let range = counts.count();
+                            let end_sq = sq.shift(range, dir);
 
-                        let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
-                        let span = span_exclusive | end_sq.bit();
+                            let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
+                            let span = span_exclusive | end_sq.bit();
 
-                        let block = self.block.white | self.block.black;
+                            let block = self.block.white | self.block.black;
 
-                        // TODO: Investigate unwrap
-                        span & block == 0
-                            || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
-                                let road = self.road.white | self.road.black;
-                                let cap = road & block;
+                            // TODO: Investigate unwrap
+                            span & block == 0
+                                || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
+                                    let road = self.road.white | self.road.black;
+                                    let cap = road & block;
 
-                                cap & end_sq.bit() == 0 && cap & sq.bit() != 0
-                            }
-                    }
+                                    cap & end_sq.bit() == 0 && cap & sq.bit() != 0
+                                }
+                        }
                 }
             },
         );
