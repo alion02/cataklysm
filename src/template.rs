@@ -1,4 +1,4 @@
-#![allow(dead_code, clippy::items_after_test_module)]
+#![allow(clippy::items_after_test_module)]
 
 use std::{
     fmt,
@@ -206,7 +206,7 @@ fn pat(pat: u32) -> Pattern {
     Pattern(pat)
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Action(ActionBacking);
 
 impl crate::game::Action for Action {}
@@ -228,6 +228,12 @@ impl fmt::Display for Action {
                 }
             },
         )
+    }
+}
+
+impl Default for Action {
+    fn default() -> Self {
+        Self::pass()
     }
 }
 
@@ -292,6 +298,8 @@ pub struct State {
 
     stacks: [Stack; ARR_LEN],
     hashes: Pair<[Hash; HIST_LEN]>,
+
+    killers: [Action; 32],
 }
 
 impl Default for State {
@@ -363,6 +371,7 @@ impl State {
             last_reversible: ply,
             stacks,
             hashes: Pair::default(),
+            killers: Default::default(),
         })
     }
 
@@ -736,45 +745,53 @@ impl State {
     }
 
     /// Assumes that there exists at least one [`State`] for which the [`Action`] is valid.
-    fn is_legal(&self, action: Action) -> bool {
-        let color = self.color();
-        let opening = self.is_opening();
-        action.branch(
-            (),
-            |_| false,
-            |_, sq, piece| {
-                (!opening || piece.is_flat())
-                    && self.stacks[sq].is_empty()
-                    && if piece.is_stone() {
-                        self.stones_left[color] != 0
-                    } else {
-                        self.caps_left[color] != 0
-                    }
-            },
-            |_, sq, dir, pat| {
-                !opening && {
-                    let (taken, counts) = pat.execute();
-                    self.stacks[sq].height() >= taken && {
-                        let range = counts.count();
-                        let end_sq = sq.shift(range, dir);
+    fn is_legal(&mut self, action: Action) -> bool {
+        self.for_actions((), |_, _, other| {
+            if action == other {
+                Break(())
+            } else {
+                Continue(())
+            }
+        })
+        .is_break()
+        // let color = self.color();
+        // let opening = self.is_opening();
+        // action.branch(
+        //     (),
+        //     |_| false,
+        //     |_, sq, piece| {
+        //         (!opening || piece.is_flat())
+        //             && self.stacks[sq].is_empty()
+        //             && if piece.is_stone() {
+        //                 self.stones_left[color] != 0
+        //             } else {
+        //                 self.caps_left[color] != 0
+        //             }
+        //     },
+        //     |_, sq, dir, pat| {
+        //         !opening && {
+        //             let (taken, counts) = pat.execute();
+        //             self.stacks[sq].height() >= taken && {
+        //                 let range = counts.count();
+        //                 let end_sq = sq.shift(range, dir);
 
-                        let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
-                        let span = span_exclusive | end_sq.bit();
+        //                 let span_exclusive = ray(sq, dir) & ray(end_sq, -dir);
+        //                 let span = span_exclusive | end_sq.bit();
 
-                        let block = self.block.white | self.block.black;
+        //                 let block = self.block.white | self.block.black;
 
-                        // TODO: Investigate unwrap
-                        span & block == 0
-                            || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
-                                let road = self.road.white | self.road.black;
-                                let cap = road & block;
+        //                 // TODO: Investigate unwrap
+        //                 span & block == 0
+        //                     || span_exclusive & block == 0 && counts.last().unwrap() == 1 && {
+        //                         let road = self.road.white | self.road.black;
+        //                         let cap = road & block;
 
-                                cap & end_sq.bit() == 0 && cap & sq.bit() != 0
-                            }
-                    }
-                }
-            },
-        )
+        //                         cap & end_sq.bit() == 0 && cap & sq.bit() != 0
+        //                     }
+        //             }
+        //         }
+        //     },
+        // )
     }
 
     fn eval(&self) -> Eval {
@@ -795,24 +812,48 @@ impl State {
 
                 let mut best_score = -Eval::MAX;
                 let mut best_action = None;
-                s.for_actions((), |_, s, action| {
-                    let score = -s
-                        .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
-                        .0;
 
-                    if score > best_score {
-                        best_score = score;
-                        best_action = Some(action);
-                        if score > alpha {
-                            alpha = score;
-                            if alpha >= beta {
-                                return Break(());
+                let killer = s.killers[s.ply as usize % s.killers.len()];
+                let mut skip_killer = false;
+
+                let mut f = {
+                    #[inline(always)]
+                    |_, s: &mut Self, action| {
+                        if action == killer {
+                            if skip_killer {
+                                return Continue(());
+                            } else {
+                                skip_killer = true;
                             }
                         }
+
+                        let score = -s
+                            .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                            .0;
+
+                        if score > best_score {
+                            best_score = score;
+                            best_action = Some(action);
+                            if score > alpha {
+                                alpha = score;
+                                if alpha >= beta {
+                                    s.killers[s.ply as usize % s.killers.len()] = action;
+                                    return Break(());
+                                }
+                            }
+                        }
+
+                        Continue(())
+                    }
+                };
+
+                'ret: {
+                    if depth > 1 && s.is_legal(killer) && f((), s, killer).is_break() {
+                        break 'ret;
                     }
 
-                    Continue(())
-                });
+                    s.for_actions((), f);
+                }
 
                 (best_score, best_action)
             },
