@@ -297,9 +297,9 @@ pub struct State {
     last_reversible: u32,
 
     stacks: [Stack; ARR_LEN],
-    hashes: Pair<[Hash; HIST_LEN]>,
+    hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
 
-    killers: [Action; 32],
+    killers: WrappingArray<Action, 32>,
 }
 
 impl Default for State {
@@ -370,8 +370,8 @@ impl State {
             ply,
             last_reversible: ply,
             stacks,
-            hashes: Pair::default(),
-            killers: Default::default(),
+            hashes: Pair::both(WrappingArray(Default::default())),
+            killers: WrappingArray(Default::default()),
         })
     }
 
@@ -385,7 +385,7 @@ impl State {
 
     fn hash_mut(&mut self) -> &mut Hash {
         let color = self.color();
-        &mut self.hashes[color][self.ply as usize / 2 % HIST_LEN]
+        &mut self.hashes[color][self.ply / 2]
     }
 
     // Performance experiment: swap C and &mut Self.
@@ -821,7 +821,7 @@ impl State {
                 let mut best_score = -Eval::MAX;
                 let mut best_action = None;
 
-                let killer = s.killers[s.ply as usize % s.killers.len()];
+                let killer = s.killers[s.ply];
 
                 let mut f = {
                     #[inline(always)]
@@ -836,7 +836,7 @@ impl State {
                             if score > alpha {
                                 alpha = score;
                                 if alpha >= beta {
-                                    s.killers[s.ply as usize % s.killers.len()] = action;
+                                    s.killers[s.ply] = action;
                                     return Break(());
                                 }
                             }

@@ -1,4 +1,7 @@
-use std::{convert::Infallible, ops::ControlFlow};
+use std::{
+    convert::Infallible,
+    ops::{ControlFlow, Index, IndexMut},
+};
 
 pub trait ControlFlowIntoContinue<T> {
     fn into_continue(self) -> T;
@@ -23,6 +26,25 @@ impl<T> ControlFlowIntoInner<T> for ControlFlow<T, T> {
             ControlFlow::Continue(v) => v,
             ControlFlow::Break(v) => v,
         }
+    }
+}
+
+// Default only available for arrays up to length 32 as of the date of this commit
+// #[derive(Default)]
+#[derive(Debug, Clone, Copy)]
+pub struct WrappingArray<T, const S: usize>(pub [T; S]);
+
+impl<T, const S: usize> Index<u32> for WrappingArray<T, S> {
+    type Output = T;
+
+    fn index(&self, index: u32) -> &Self::Output {
+        &self.0[index as usize % S]
+    }
+}
+
+impl<T, const S: usize> IndexMut<u32> for WrappingArray<T, S> {
+    fn index_mut(&mut self, index: u32) -> &mut Self::Output {
+        &mut self.0[index as usize % S]
     }
 }
 
