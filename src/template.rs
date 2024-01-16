@@ -609,11 +609,11 @@ impl State {
 
                     // TODO: Inspect bounds checks
                     // FIXME: This is not good
-                    // - manually masks off the garbage bits with a magic number
+                    // - manually masks off the garbage bits with a tangentially related number
                     // - doesn't reuse data computed within the following .drop()
                     hash ^= unsafe {
                         HASH_STACK[sq][s.stacks[sq].height() as usize]
-                            [(Stack::from_hand_and_count(hand, count).raw() & 0x1FF) as usize]
+                            [(Stack::from_hand_and_count(hand, count).raw() % (2 << HAND)) as usize]
                     };
 
                     s.stacks[sq].drop(&mut hand, count);
