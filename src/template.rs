@@ -506,11 +506,16 @@ impl State {
 
         s.ply += 1;
 
+        let last_reversible = s.last_reversible;
+
         let r = action.branch(
             (&mut s, hash, f),
             |(s, _, f)| f(s),
             |(s, mut hash, f), sq, piece| {
                 let bit = sq.bit();
+
+                // Placement is not reversible
+                s.last_reversible = s.ply;
 
                 if piece.is_road() {
                     s.road[color] ^= bit;
@@ -622,6 +627,9 @@ impl State {
                 if is_block {
                     if is_road {
                         if (s.block.white | s.block.black) & bit != 0 {
+                            // Smashing a wall is not reversible
+                            s.last_reversible = s.ply;
+
                             hash ^= unsafe { HASH_WALL[sq] };
                         }
 
@@ -654,6 +662,7 @@ impl State {
         );
 
         if undo {
+            s.last_reversible = last_reversible;
             s.ply -= 1;
         }
 
