@@ -822,19 +822,10 @@ impl State {
                 let mut best_action = None;
 
                 let killer = s.killers[s.ply as usize % s.killers.len()];
-                let mut skip_killer = false;
 
                 let mut f = {
                     #[inline(always)]
-                    |_, s: &mut Self, action| {
-                        if action == killer {
-                            if skip_killer {
-                                return Continue(());
-                            } else {
-                                skip_killer = true;
-                            }
-                        }
-
+                    |s: &mut Self, action| {
                         let score = -s
                             .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
                             .0;
@@ -856,11 +847,17 @@ impl State {
                 };
 
                 'ret: {
-                    if s.is_legal(killer) && f((), s, killer).is_break() {
+                    if s.is_legal(killer) && f(s, killer).is_break() {
                         break 'ret;
                     }
 
-                    s.for_actions((), f);
+                    s.for_actions((), |_, s, action| {
+                        if action == killer {
+                            Continue(())
+                        } else {
+                            f(s, action)
+                        }
+                    });
                 }
 
                 (best_score, best_action)
