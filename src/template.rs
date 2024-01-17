@@ -284,6 +284,50 @@ impl Action {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct Packed(u8);
+
+impl Packed {
+    fn is_upper(self) -> bool {
+        self.0 & 0x40 == 0
+    }
+
+    fn is_lower(self) -> bool {
+        self.0 & 0x80 == 0
+    }
+
+    fn set_upper(&mut self) {
+        self.0 |= 0x80;
+    }
+
+    fn set_lower(&mut self) {
+        self.0 |= 0x40;
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct TtEntry {
+    sig: u64,
+    score: Eval,
+    action: Action,
+    depth: u8,
+    packed: Packed,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(align(32))]
+struct TtBucket([TtEntry; 2]);
+
+impl TtBucket {
+    fn entry(&mut self, sig: u64) -> Option<&mut TtEntry> {
+        self.0.iter_mut().find(|e| e.sig == sig)
+    }
+
+    fn worst_entry(&mut self) -> &mut TtEntry {
+        self.0.iter_mut().min_by_key(|e| e.depth).unwrap()
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct State {
@@ -300,6 +344,8 @@ pub struct State {
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
 
     killers: WrappingArray<Action, 32>,
+
+    tt: Box<[TtBucket]>,
 }
 
 impl Default for State {
@@ -372,6 +418,10 @@ impl State {
             stacks,
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
+            tt: std::iter::repeat(TtBucket::default())
+                .take(1 << 24)
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
         })
     }
 
@@ -819,7 +869,7 @@ impl State {
         Eval::new(eval_half(color) - eval_half(!color) + 17)
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, beta: Eval) -> (Eval, Option<Action>) {
+    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> (Eval, Option<Action>) {
         self.status(
             (),
             |_, s| {
@@ -827,41 +877,76 @@ impl State {
                     return (s.eval(), None);
                 }
 
+                let original_alpha = alpha;
+                let original_beta = beta;
+
                 let mut best_score = -Eval::MAX;
-                let mut best_action = None;
+                let mut best_action = Action::pass();
 
-                let killer = s.killers[s.ply];
+                let (idx, sig) = s.hash_mut().split(s.tt.len());
 
-                let mut f = {
-                    #[inline(always)]
-                    |s: &mut Self, action| {
-                        let score = -s
-                            .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
-                            .0;
+                'ret: {
+                    let bucket = &mut s.tt[idx];
+                    let entry = bucket.entry(sig);
 
-                        if score > best_score {
-                            best_score = score;
-                            best_action = Some(action);
-                            if score > alpha {
-                                alpha = score;
-                                if alpha >= beta {
-                                    s.killers[s.ply] = action;
-                                    return Break(());
-                                }
+                    let tt_action = if let Some(entry) = entry {
+                        if entry.depth as u32 == depth {
+                            let score = entry.score;
+
+                            if entry.packed.is_lower() {
+                                alpha = alpha.max(score);
+                            }
+                            if entry.packed.is_upper() {
+                                beta = beta.min(score);
+                            }
+
+                            if alpha >= beta {
+                                best_score = score;
+                                best_action = entry.action;
+                                break 'ret;
                             }
                         }
 
-                        Continue(())
-                    }
-                };
+                        entry.action
+                    } else {
+                        Action::pass()
+                    };
 
-                'ret: {
-                    if s.is_legal(killer) && f(s, killer).is_break() {
+                    let mut f = {
+                        #[inline(always)]
+                        |s: &mut Self, action| {
+                            let score = -s
+                                .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                                .0;
+
+                            if score > best_score {
+                                best_score = score;
+                                best_action = action;
+                                if score > alpha {
+                                    alpha = score;
+                                    if alpha >= beta {
+                                        s.killers[s.ply] = action;
+                                        return Break(());
+                                    }
+                                }
+                            }
+
+                            Continue(())
+                        }
+                    };
+
+                    if s.is_legal(tt_action) && f(s, tt_action).is_break() {
+                        break 'ret;
+                    }
+
+                    let killer = s.killers[s.ply];
+
+                    if tt_action != killer && s.is_legal(killer) && f(s, killer).is_break() {
                         break 'ret;
                     }
 
                     s.for_actions((), |_, s, action| {
-                        if action == killer {
+                        if action == tt_action || action == killer {
                             Continue(())
                         } else {
                             f(s, action)
@@ -869,7 +954,27 @@ impl State {
                     });
                 }
 
-                (best_score, best_action)
+                let bucket = &mut s.tt[idx];
+                let entry = if let Some(entry) = bucket.entry(sig) {
+                    entry
+                } else {
+                    bucket.worst_entry()
+                };
+
+                entry.sig = sig;
+                entry.score = best_score;
+                entry.action = best_action;
+                entry.depth = depth as _;
+
+                entry.packed = Packed::default();
+                if best_score <= original_alpha {
+                    entry.packed.set_upper();
+                }
+                if best_score >= original_beta {
+                    entry.packed.set_lower();
+                }
+
+                (best_score, Some(best_action))
             },
             |_, _| (Eval::ZERO, None),
             |_, s| (Eval::win(s.ply), None),

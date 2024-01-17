@@ -13,6 +13,10 @@ pub struct Hash(u64);
 impl Hash {
     pub const ZERO: Self = Self(0);
     pub const SIDE_TO_MOVE: Self = Self(0xf812ec2e34a9c388); // 1815ad0c9e50c110
+
+    pub fn split(self, len: usize) -> (usize, u64) {
+        ((self.0 as usize) % len, self.0)
+    }
 }
 
 impl BitXor for Hash {

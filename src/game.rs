@@ -56,7 +56,7 @@ pub enum PerftMode {
 
 pub trait Action: fmt::Display {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Eval(i32);
 
 impl fmt::Display for Eval {
