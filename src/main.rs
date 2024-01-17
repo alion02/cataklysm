@@ -51,6 +51,10 @@ fn main() {
                     "depth {d}: {} (eval: {eval}) in {secs:.2}s",
                     action.unwrap(),
                 );
+
+                if eval.is_decisive() {
+                    break;
+                }
             }
         }
         _ => panic!(),
