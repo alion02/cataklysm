@@ -340,6 +340,8 @@ pub struct State {
     ply: u32,
     last_reversible: u32,
 
+    nodes: u64,
+
     stacks: [Stack; ARR_LEN],
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
 
@@ -415,6 +417,7 @@ impl State {
             caps_left,
             ply,
             last_reversible: ply,
+            nodes: 0,
             stacks,
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
@@ -870,6 +873,7 @@ impl State {
     }
 
     fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> (Eval, Option<Action>) {
+        self.nodes += 1;
         self.status(
             (),
             |_, s| {
@@ -1015,6 +1019,10 @@ impl Game for State {
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
         let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
         (score, action.map(|action| Box::new(action) as _))
+    }
+
+    fn read_nodes(&mut self) -> u64 {
+        (self.nodes, self.nodes = 0).0
     }
 }
 

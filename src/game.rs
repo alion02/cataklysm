@@ -119,6 +119,8 @@ impl Eval {
 pub trait Game {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
+
+    fn read_nodes(&mut self) -> u64;
 }
 
 #[derive(Debug)]
