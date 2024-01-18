@@ -296,12 +296,20 @@ impl Packed {
         self.0 & 0x80 == 0
     }
 
+    fn generation(self) -> u32 {
+        self.0 as u32 & 0x3F
+    }
+
     fn set_upper(&mut self) {
         self.0 |= 0x80;
     }
 
     fn set_lower(&mut self) {
         self.0 |= 0x40;
+    }
+
+    fn set_generation(&mut self, generation: u32) {
+        self.0 = self.0 & !0x3F | generation as u8 & 0x3F;
     }
 }
 
@@ -314,8 +322,9 @@ struct TtEntry {
     packed: Packed,
 }
 
-fn rate_entry(depth: u8) -> u32 {
-    depth as u32
+// TODO: Cleanup
+fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> u32 {
+    depth as u32 + (entry_gen == curr_gen) as u32
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -327,10 +336,10 @@ impl TtBucket {
         self.0.iter_mut().find(|e| e.sig == sig)
     }
 
-    fn worst_entry(&mut self) -> &mut TtEntry {
+    fn worst_entry(&mut self, curr_gen: u32) -> &mut TtEntry {
         self.0
             .iter_mut()
-            .min_by_key(|e| rate_entry(e.depth))
+            .min_by_key(|e| rate_entry(e.depth, e.packed.generation(), curr_gen))
             .unwrap()
     }
 }
@@ -348,6 +357,7 @@ pub struct State {
     last_reversible: u32,
 
     nodes: u64,
+    generation: u32,
 
     stacks: [Stack; ARR_LEN],
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
@@ -425,6 +435,7 @@ impl State {
             ply,
             last_reversible: ply,
             nodes: 0,
+            generation: 0,
             stacks,
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
@@ -914,6 +925,7 @@ impl State {
                                 if alpha >= beta {
                                     best_score = score;
                                     best_action = entry.action;
+                                    entry.packed.set_generation(s.generation);
                                     break 'ret;
                                 }
                             }
@@ -969,16 +981,19 @@ impl State {
                     let entry = if let Some(entry) = bucket.entry(sig) {
                         entry
                     } else {
-                        bucket.worst_entry()
+                        bucket.worst_entry(s.generation)
                     };
 
-                    if rate_entry(depth as _) > rate_entry(entry.depth) {
+                    if rate_entry(depth as _, s.generation, s.generation)
+                        > rate_entry(entry.depth, entry.packed.generation(), s.generation)
+                    {
                         entry.sig = sig;
                         entry.score = best_score;
                         entry.action = best_action;
                         entry.depth = depth as _;
 
                         entry.packed = Packed::default();
+                        entry.packed.set_generation(s.generation);
                         if best_score <= original_alpha {
                             entry.packed.set_upper();
                         }
@@ -1027,6 +1042,9 @@ impl Game for State {
 
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
         let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+
+        self.generation += 1;
+
         (score, action.map(|action| Box::new(action) as _))
     }
 
