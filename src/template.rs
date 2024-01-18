@@ -314,6 +314,10 @@ struct TtEntry {
     packed: Packed,
 }
 
+fn rate_entry(depth: u8) -> u32 {
+    depth as u32
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 #[repr(align(32))]
 struct TtBucket([TtEntry; 2]);
@@ -324,7 +328,10 @@ impl TtBucket {
     }
 
     fn worst_entry(&mut self) -> &mut TtEntry {
-        self.0.iter_mut().min_by_key(|e| e.depth).unwrap()
+        self.0
+            .iter_mut()
+            .min_by_key(|e| rate_entry(e.depth))
+            .unwrap()
     }
 }
 
@@ -888,96 +895,98 @@ impl State {
                 let mut best_action = Action::pass();
 
                 let (idx, sig) = s.hash_mut().split(s.tt.len());
-
                 'ret: {
-                    let bucket = &mut s.tt[idx];
-                    let entry = bucket.entry(sig);
+                    'update_tt: {
+                        let bucket = &mut s.tt[idx];
+                        let entry = bucket.entry(sig);
 
-                    let tt_action = if let Some(entry) = entry {
-                        if entry.depth as u32 == depth {
-                            let score = entry.score;
+                        let tt_action = if let Some(entry) = entry {
+                            if entry.depth as u32 == depth {
+                                let score = entry.score;
 
-                            if entry.packed.is_lower() {
-                                alpha = alpha.max(score);
-                            }
-                            if entry.packed.is_upper() {
-                                beta = beta.min(score);
-                            }
+                                if entry.packed.is_lower() {
+                                    alpha = alpha.max(score);
+                                }
+                                if entry.packed.is_upper() {
+                                    beta = beta.min(score);
+                                }
 
-                            if alpha >= beta {
-                                best_score = score;
-                                best_action = entry.action;
-                                break 'ret;
-                            }
-                        }
-
-                        entry.action
-                    } else {
-                        Action::pass()
-                    };
-
-                    let mut f = {
-                        #[inline(always)]
-                        |s: &mut Self, action| {
-                            let score = -s
-                                .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
-                                .0;
-
-                            if score > best_score {
-                                best_score = score;
-                                best_action = action;
-                                if score > alpha {
-                                    alpha = score;
-                                    if alpha >= beta {
-                                        s.killers[s.ply] = action;
-                                        return Break(());
-                                    }
+                                if alpha >= beta {
+                                    best_score = score;
+                                    best_action = entry.action;
+                                    break 'ret;
                                 }
                             }
 
-                            Continue(())
+                            entry.action
+                        } else {
+                            Action::pass()
+                        };
+
+                        let mut f = {
+                            #[inline(always)]
+                            |s: &mut Self, action| {
+                                let score = -s
+                                    .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                                    .0;
+
+                                if score > best_score {
+                                    best_score = score;
+                                    best_action = action;
+                                    if score > alpha {
+                                        alpha = score;
+                                        if alpha >= beta {
+                                            s.killers[s.ply] = action;
+                                            return Break(());
+                                        }
+                                    }
+                                }
+
+                                Continue(())
+                            }
+                        };
+
+                        if s.is_legal(tt_action) && f(s, tt_action).is_break() {
+                            break 'update_tt;
                         }
+
+                        let killer = s.killers[s.ply];
+
+                        if tt_action != killer && s.is_legal(killer) && f(s, killer).is_break() {
+                            break 'update_tt;
+                        }
+
+                        s.for_actions((), |_, s, action| {
+                            if action == tt_action || action == killer {
+                                Continue(())
+                            } else {
+                                f(s, action)
+                            }
+                        });
+                    }
+
+                    let bucket = &mut s.tt[idx];
+                    let entry = if let Some(entry) = bucket.entry(sig) {
+                        entry
+                    } else {
+                        bucket.worst_entry()
                     };
 
-                    if s.is_legal(tt_action) && f(s, tt_action).is_break() {
-                        break 'ret;
-                    }
+                    if rate_entry(depth as _) > rate_entry(entry.depth) {
+                        entry.sig = sig;
+                        entry.score = best_score;
+                        entry.action = best_action;
+                        entry.depth = depth as _;
 
-                    let killer = s.killers[s.ply];
-
-                    if tt_action != killer && s.is_legal(killer) && f(s, killer).is_break() {
-                        break 'ret;
-                    }
-
-                    s.for_actions((), |_, s, action| {
-                        if action == tt_action || action == killer {
-                            Continue(())
-                        } else {
-                            f(s, action)
+                        entry.packed = Packed::default();
+                        if best_score <= original_alpha {
+                            entry.packed.set_upper();
                         }
-                    });
+                        if best_score >= original_beta {
+                            entry.packed.set_lower();
+                        }
+                    }
                 }
-
-                let bucket = &mut s.tt[idx];
-                let entry = if let Some(entry) = bucket.entry(sig) {
-                    entry
-                } else {
-                    bucket.worst_entry()
-                };
-
-                entry.sig = sig;
-                entry.score = best_score;
-                entry.action = best_action;
-                entry.depth = depth as _;
-
-                entry.packed = Packed::default();
-                if best_score <= original_alpha {
-                    entry.packed.set_upper();
-                }
-                if best_score >= original_beta {
-                    entry.packed.set_lower();
-                }
-
                 (best_score, Some(best_action))
             },
             |_, _| (Eval::ZERO, None),
