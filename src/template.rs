@@ -284,6 +284,66 @@ impl Action {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct Packed(u8);
+
+impl Packed {
+    fn is_upper(self) -> bool {
+        self.0 & 0x40 == 0
+    }
+
+    fn is_lower(self) -> bool {
+        self.0 & 0x80 == 0
+    }
+
+    fn generation(self) -> u32 {
+        self.0 as u32 & 0x3F
+    }
+
+    fn set_upper(&mut self) {
+        self.0 |= 0x80;
+    }
+
+    fn set_lower(&mut self) {
+        self.0 |= 0x40;
+    }
+
+    fn set_generation(&mut self, generation: u32) {
+        self.0 = self.0 & !0x3F | generation as u8 & 0x3F;
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct TtEntry {
+    sig: u64,
+    score: Eval,
+    action: Action,
+    depth: u8,
+    packed: Packed,
+}
+
+// TODO: Cleanup
+fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> i32 {
+    depth as i32 - (curr_gen - entry_gen & 0x3F) as i32
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+#[repr(align(32))]
+struct TtBucket([TtEntry; 2]);
+
+impl TtBucket {
+    fn entry(&mut self, sig: u64) -> Option<&mut TtEntry> {
+        self.0.iter_mut().find(|e| e.sig == sig)
+    }
+
+    fn worst_entry(&mut self, curr_gen: u32) -> &mut TtEntry {
+        self.0
+            .iter_mut()
+            .min_by_key(|e| rate_entry(e.depth, e.packed.generation(), curr_gen))
+            .unwrap()
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct State {
@@ -297,11 +357,14 @@ pub struct State {
     last_reversible: u32,
 
     nodes: u64,
+    generation: u32,
 
     stacks: [Stack; ARR_LEN],
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
 
     killers: WrappingArray<Action, 32>,
+
+    tt: Box<[TtBucket]>,
 }
 
 impl Default for State {
@@ -372,9 +435,14 @@ impl State {
             ply,
             last_reversible: ply,
             nodes: 0,
+            generation: 0,
             stacks,
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
+            tt: std::iter::repeat(TtBucket::default())
+                .take(1 << 24)
+                .collect::<Vec<_>>()
+                .into_boxed_slice(),
         })
     }
 
@@ -822,7 +890,7 @@ impl State {
         Eval::new(eval_half(color) - eval_half(!color) + 17)
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, beta: Eval) -> (Eval, Option<Action>) {
+    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> (Eval, Option<Action>) {
         self.nodes += 1;
         self.status(
             (),
@@ -831,49 +899,110 @@ impl State {
                     return (s.eval(), None);
                 }
 
+                let original_alpha = alpha;
+                let original_beta = beta;
+
                 let mut best_score = -Eval::MAX;
-                let mut best_action = None;
+                let mut best_action = Action::pass();
 
-                let killer = s.killers[s.ply];
+                let (idx, sig) = s.hash_mut().split(s.tt.len());
+                'ret: {
+                    'update_tt: {
+                        let bucket = &mut s.tt[idx];
+                        let entry = bucket.entry(sig);
 
-                let mut f = {
-                    #[inline(always)]
-                    |s: &mut Self, action| {
-                        let score = -s
-                            .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
-                            .0;
+                        let tt_action = if let Some(entry) = entry {
+                            if entry.depth as u32 == depth {
+                                let score = entry.score;
 
-                        if score > best_score {
-                            best_score = score;
-                            best_action = Some(action);
-                            if score > alpha {
-                                alpha = score;
+                                if entry.packed.is_lower() {
+                                    alpha = alpha.max(score);
+                                }
+                                if entry.packed.is_upper() {
+                                    beta = beta.min(score);
+                                }
+
                                 if alpha >= beta {
-                                    s.killers[s.ply] = action;
-                                    return Break(());
+                                    best_score = score;
+                                    best_action = entry.action;
+                                    entry.packed.set_generation(s.generation);
+                                    break 'ret;
                                 }
                             }
-                        }
 
-                        Continue(())
-                    }
-                };
-
-                'ret: {
-                    if s.is_legal(killer) && f(s, killer).is_break() {
-                        break 'ret;
-                    }
-
-                    s.for_actions((), |_, s, action| {
-                        if action == killer {
-                            Continue(())
+                            entry.action
                         } else {
-                            f(s, action)
-                        }
-                    });
-                }
+                            Action::pass()
+                        };
 
-                (best_score, best_action)
+                        let mut f = {
+                            #[inline(always)]
+                            |s: &mut Self, action| {
+                                let score = -s
+                                    .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                                    .0;
+
+                                if score > best_score {
+                                    best_score = score;
+                                    best_action = action;
+                                    if score > alpha {
+                                        alpha = score;
+                                        if alpha >= beta {
+                                            s.killers[s.ply] = action;
+                                            return Break(());
+                                        }
+                                    }
+                                }
+
+                                Continue(())
+                            }
+                        };
+
+                        if s.is_legal(tt_action) && f(s, tt_action).is_break() {
+                            break 'update_tt;
+                        }
+
+                        let killer = s.killers[s.ply];
+
+                        if tt_action != killer && s.is_legal(killer) && f(s, killer).is_break() {
+                            break 'update_tt;
+                        }
+
+                        s.for_actions((), |_, s, action| {
+                            if action == tt_action || action == killer {
+                                Continue(())
+                            } else {
+                                f(s, action)
+                            }
+                        });
+                    }
+
+                    let bucket = &mut s.tt[idx];
+                    let entry = if let Some(entry) = bucket.entry(sig) {
+                        entry
+                    } else {
+                        bucket.worst_entry(s.generation)
+                    };
+
+                    if rate_entry(depth as _, s.generation, s.generation)
+                        > rate_entry(entry.depth, entry.packed.generation(), s.generation)
+                    {
+                        entry.sig = sig;
+                        entry.score = best_score;
+                        entry.action = best_action;
+                        entry.depth = depth as _;
+
+                        entry.packed = Packed::default();
+                        entry.packed.set_generation(s.generation);
+                        if best_score <= original_alpha {
+                            entry.packed.set_upper();
+                        }
+                        if best_score >= original_beta {
+                            entry.packed.set_lower();
+                        }
+                    }
+                }
+                (best_score, Some(best_action))
             },
             |_, _| (Eval::ZERO, None),
             |_, s| (Eval::win(s.ply), None),
@@ -913,6 +1042,9 @@ impl Game for State {
 
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
         let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+
+        self.generation += 1;
+
         (score, action.map(|action| Box::new(action) as _))
     }
 
