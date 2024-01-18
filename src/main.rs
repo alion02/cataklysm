@@ -46,10 +46,13 @@ fn main() {
                 let time = Instant::now();
                 let (eval, action) = game.search(d);
                 let secs = time.elapsed().as_secs_f64();
+                let nodes = game.read_nodes();
+                let nps = nodes as f64 / secs;
 
                 println!(
-                    "depth {d}: {} (eval: {eval}) in {secs:.2}s",
+                    "depth {d}: {} (eval: {eval}), {nodes} nodes in {secs:.2}s ({:.2} Mnps)",
                     action.unwrap(),
+                    nps / 1_000_000.,
                 );
 
                 if eval.is_decisive() {
