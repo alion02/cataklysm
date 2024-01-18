@@ -323,8 +323,8 @@ struct TtEntry {
 }
 
 // TODO: Cleanup
-fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> u32 {
-    depth as u32 + (entry_gen == curr_gen) as u32
+fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> i32 {
+    depth as i32 - (curr_gen - entry_gen & 0x3F) as i32
 }
 
 #[derive(Debug, Clone, Copy, Default)]
