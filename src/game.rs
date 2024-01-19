@@ -114,6 +114,11 @@ impl Eval {
     pub fn abs(self) -> Self {
         Self(self.0.abs())
     }
+
+    #[inline(always)]
+    pub fn adjust(self, adjustment: i32) -> Self {
+        Self(self.0 + adjustment)
+    }
 }
 
 pub trait Game {

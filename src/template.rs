@@ -893,7 +893,13 @@ impl State {
         Eval::new(eval_half(color) - eval_half(!color) + 17)
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> (Eval, Option<Action>) {
+    fn search(
+        &mut self,
+        depth: u32,
+        mut alpha: Eval,
+        mut beta: Eval,
+        allow_nmp: bool,
+    ) -> (Eval, Option<Action>) {
         self.nodes += 1;
         self.status(
             (),
@@ -938,11 +944,26 @@ impl State {
                             Action::pass()
                         };
 
+                        if depth > 4 && allow_nmp && !s.is_opening() && s.eval() >= beta {
+                            let score = -s
+                                .with(true, Action::pass(), |s| {
+                                    s.search(depth - 4, -beta, -beta.adjust(-1), false)
+                                })
+                                .0;
+
+                            if score >= beta {
+                                best_score = beta;
+                                break 'ret;
+                            }
+                        }
+
                         let mut f = {
                             #[inline(always)]
                             |s: &mut Self, action| {
                                 let score = -s
-                                    .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
+                                    .with(true, action, |s| {
+                                        s.search(depth - 1, -beta, -alpha, true)
+                                    })
                                     .0;
 
                                 if score > best_score {
@@ -1044,7 +1065,7 @@ impl Game for State {
     }
 
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
-        let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+        let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE, false);
 
         self.generation += 1;
 
