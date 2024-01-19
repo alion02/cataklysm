@@ -883,8 +883,11 @@ impl State {
     }
 
     fn eval(&self) -> Eval {
-        let eval_half =
-            |color| self.stones_left[color] as i32 * -20 + self.count_flats(color) as i32 * 14;
+        let eval_half = |color| {
+            self.stones_left[color] as i32 * -20
+                + self.caps_left[color] as i32 * -30
+                + self.count_flats(color) as i32 * 14
+        };
 
         let color = self.color();
         Eval::new(eval_half(color) - eval_half(!color) + 17)
