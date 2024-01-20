@@ -60,6 +60,26 @@ fn main() {
                 }
             }
         }
+        "showmatch" => {
+            let mut game = make_game(args);
+            loop {
+                let mut chosen = None;
+                for d in 1..8 {
+                    let (eval, action) = game.search(d);
+                    chosen = action;
+                    if eval.is_decisive() {
+                        break;
+                    }
+                }
+
+                let Some(chosen) = chosen else {
+                    panic!("failed to get an action")
+                };
+
+                println!("{chosen}");
+                game.play(chosen);
+            }
+        }
         _ => panic!(),
     }
 }

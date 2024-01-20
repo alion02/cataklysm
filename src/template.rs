@@ -1,6 +1,7 @@
 #![allow(clippy::items_after_test_module)]
 
 use std::{
+    any::Any,
     fmt,
     mem::transmute,
     ops::{
@@ -13,8 +14,14 @@ use std::{
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha20Rng;
 
-use crate::{game::*, hash::*, pair::*, stack::*, state::*, util::*};
-use Direction::*;
+use crate::{
+    game::{Action as GameAction, *},
+    hash::*,
+    pair::*,
+    stack::*,
+    state::{Direction::*, *},
+    util::*,
+};
 
 static INIT: Mutex<bool> = Mutex::new(false);
 
@@ -209,7 +216,11 @@ fn pat(pat: u32) -> Pattern {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Action(ActionBacking);
 
-impl crate::game::Action for Action {}
+impl GameAction for Action {
+    fn as_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
+}
 
 impl fmt::Display for Action {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -1043,12 +1054,25 @@ impl Game for State {
         }
     }
 
-    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn crate::game::Action>>) {
+    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn GameAction>>) {
         let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
 
         self.generation += 1;
 
         (score, action.map(|action| Box::new(action) as _))
+    }
+
+    fn parse_action(&self, _ptn: &str) -> Option<Box<dyn GameAction>> {
+        todo!()
+    }
+
+    fn play(&mut self, action: Box<dyn GameAction>) {
+        let action = action.as_any();
+        let Some(action) = action.downcast_ref() else {
+            panic!("action-state size mismatch");
+        };
+
+        self.with(false, *action, |_| ());
     }
 
     fn read_nodes(&mut self) -> u64 {
