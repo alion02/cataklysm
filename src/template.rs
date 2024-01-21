@@ -1062,17 +1062,17 @@ impl Game for State {
         (score, action.map(|action| Box::new(action) as _))
     }
 
-    fn parse_action(&mut self, ptn: &str) -> Option<Box<dyn GameAction>> {
+    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn GameAction>, ParseActionError> {
         use takparse::{Direction, Move, MoveKind::*, Piece};
 
         let Ok(mv) = ptn.parse::<Move>() else {
-            return None;
+            return Err(ParseActionError);
         };
 
         let square = mv.square();
         let sq = sq(square.column() as usize + square.row() as usize * ROW_LEN);
 
-        Some(Box::new(match mv.kind() {
+        Ok(Box::new(match mv.kind() {
             Place(piece) => Action::place(
                 sq,
                 match piece {
@@ -1094,7 +1094,7 @@ impl Game for State {
         }))
     }
 
-    fn play(&mut self, action: Box<dyn GameAction>) -> Result<(), ()> {
+    fn play(&mut self, action: Box<dyn GameAction>) -> Result<(), PlayActionError> {
         let action = action.as_any();
         let Some(&action) = action.downcast_ref() else {
             panic!("action-state size mismatch");
@@ -1104,7 +1104,7 @@ impl Game for State {
             self.with(false, action, |_| ());
             Ok(())
         } else {
-            Err(())
+            Err(PlayActionError)
         }
     }
 
