@@ -73,7 +73,8 @@ fn main() {
                 }
 
                 let Some(chosen) = chosen else {
-                    panic!("failed to get an action")
+                    println!("game finished");
+                    break;
                 };
 
                 println!("{chosen}");
