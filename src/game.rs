@@ -123,7 +123,7 @@ pub trait Game {
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
     fn parse_action(&self, ptn: &str) -> Option<Box<dyn Action>>;
     fn play(&mut self, action: Box<dyn Action>);
-    fn read_nodes(&mut self) -> u64;
+    fn take_nodes(&mut self) -> u64;
 }
 
 #[derive(Debug)]

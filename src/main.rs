@@ -46,7 +46,7 @@ fn main() {
                 let time = Instant::now();
                 let (eval, action) = game.search(d);
                 let secs = time.elapsed().as_secs_f64();
-                let nodes = game.read_nodes();
+                let nodes = game.take_nodes();
                 let nps = nodes as f64 / secs;
 
                 println!(

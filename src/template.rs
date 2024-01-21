@@ -1075,7 +1075,7 @@ impl Game for State {
         self.with(false, *action, |_| ());
     }
 
-    fn read_nodes(&mut self) -> u64 {
+    fn take_nodes(&mut self) -> u64 {
         (self.nodes, self.nodes = 0).0
     }
 }
