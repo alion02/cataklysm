@@ -19,7 +19,7 @@ use crate::{
     hash::*,
     pair::*,
     stack::*,
-    state::{Direction::*, *},
+    state::{Direction::*, Piece::*, *},
     util::*,
 };
 
@@ -502,17 +502,17 @@ impl State {
             };
 
             if has_stones {
-                acc = for_placements(acc, Piece::Flat)?;
+                acc = for_placements(acc, Flat)?;
 
                 if is_opening {
                     break 'skip_nobles;
                 }
 
-                acc = for_placements(acc, Piece::Wall)?;
+                acc = for_placements(acc, Wall)?;
             }
 
             if has_caps {
-                acc = for_placements(acc, Piece::Cap)?;
+                acc = for_placements(acc, Cap)?;
             }
         }
 
@@ -1062,21 +1062,58 @@ impl Game for State {
         (score, action.map(|action| Box::new(action) as _))
     }
 
-    fn parse_action(&self, _ptn: &str) -> Option<Box<dyn GameAction>> {
-        todo!()
+    fn parse_action(&mut self, ptn: &str) -> Option<Box<dyn GameAction>> {
+        use takparse::{Direction, Move, MoveKind::*, Piece};
+
+        let Ok(mv) = ptn.parse::<Move>() else {
+            return None;
+        };
+
+        let square = mv.square();
+        let sq = sq(square.column() as usize + square.row() as usize * ROW_LEN);
+
+        Some(Box::new(match mv.kind() {
+            Place(piece) => Action::place(
+                sq,
+                match piece {
+                    Piece::Flat => Flat,
+                    Piece::Wall => Wall,
+                    Piece::Cap => Cap,
+                },
+            ),
+            Spread(direction, pattern) => Action::spread(
+                sq,
+                match direction {
+                    Direction::Up => Up,
+                    Direction::Down => Down,
+                    Direction::Right => Right,
+                    Direction::Left => Left,
+                },
+                pat(pattern.mask() as u32 >> 8 - HAND),
+            ),
+        }))
     }
 
-    fn play(&mut self, action: Box<dyn GameAction>) {
+    fn play(&mut self, action: Box<dyn GameAction>) -> Result<(), ()> {
         let action = action.as_any();
-        let Some(action) = action.downcast_ref() else {
+        let Some(&action) = action.downcast_ref() else {
             panic!("action-state size mismatch");
         };
 
-        self.with(false, *action, |_| ());
+        if self.is_legal(action) {
+            self.with(false, action, |_| ());
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 
     fn take_nodes(&mut self) -> u64 {
         (self.nodes, self.nodes = 0).0
+    }
+
+    fn curr_hash(&mut self) -> Hash {
+        *self.hash_mut()
     }
 }
 

@@ -1,5 +1,6 @@
 use std::{
     env::{args, Args},
+    io::stdin,
     time::Instant,
 };
 
@@ -78,7 +79,18 @@ fn main() {
                 };
 
                 println!("{chosen}");
-                game.play(chosen);
+                game.play(chosen).unwrap();
+            }
+        }
+        "hashtest" => {
+            let mut game = make_game(args);
+            let mut stdin = stdin().lines().map(|l| l.unwrap());
+            loop {
+                println!("{:?}", game.curr_hash());
+                let action = game.parse_action(&stdin.next().unwrap()).unwrap();
+                if game.play(action).is_err() {
+                    println!("invalid action");
+                }
             }
         }
         _ => panic!(),

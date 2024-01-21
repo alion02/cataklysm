@@ -1,6 +1,6 @@
 use std::{any::Any, error::Error, fmt, ops::Neg};
 
-use crate::{pair::Pair, state::*};
+use crate::{hash::Hash, pair::Pair, state::*};
 
 pub enum Position<'a> {
     Start(usize),
@@ -121,9 +121,10 @@ impl Eval {
 pub trait Game {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
-    fn parse_action(&self, ptn: &str) -> Option<Box<dyn Action>>;
-    fn play(&mut self, action: Box<dyn Action>);
+    fn parse_action(&mut self, ptn: &str) -> Option<Box<dyn Action>>;
+    fn play(&mut self, action: Box<dyn Action>) -> Result<(), ()>;
     fn take_nodes(&mut self) -> u64;
+    fn curr_hash(&mut self) -> Hash;
 }
 
 #[derive(Debug)]
