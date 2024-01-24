@@ -162,7 +162,7 @@ mod tests {
     #[case(4, 21315929)]
     #[cfg_attr(not(debug_assertions), case(5, 1506310007))]
     fn perft_early(#[case] depth: u32, #[case] expected: u64) {
-        let mut game = new_game(5, Options::default(5).unwrap()).unwrap();
+        let mut game = new_game(6, Options::default(6).unwrap()).unwrap();
         game.set_position("x4,2C,1/x4,1C,x/x2,1S,1,121,x/x,2,x4/x3,2S,2S,x/2,x5 1 8")
             .unwrap();
         assert_eq!(game.perft(depth, PerftMode::Batch), expected);
