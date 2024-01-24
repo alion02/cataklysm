@@ -10,6 +10,7 @@ use tokio::{
 
 enum TeiMsg {
     Game(Box<dyn Game>),
+    Play(String),
     Search {
         time: Pair<Duration>,
         increment: Pair<Duration>,
@@ -53,6 +54,10 @@ pub async fn run() {
             'idle: loop {
                 match msg {
                     Game(new_game) => game = new_game,
+                    Play(s) => {
+                        let action = game.parse_action(&s).unwrap();
+                        game.play(action).unwrap();
+                    }
                     Search { time, increment } => {
                         let mut d = 1;
                         loop {
@@ -79,17 +84,59 @@ pub async fn run() {
     let rx = recv.1;
     let tx = send.0;
 
-    loop {
-        let line = lines.next_line().await.unwrap().unwrap();
-        let mut cmd = line.split_ascii_whitespace();
-        match cmd.next().unwrap() {
-            "isready" => println!("readyok"),
-            "teinewgame" => {
-                let size = cmd.next().unwrap().parse().unwrap();
-                let game = new_game(size, Options::default(size).unwrap()).unwrap();
-            }
+    let mut history = vec![];
 
-            _ => println!(r#"info string received unknown command "{line}""#),
+    loop {
+        select! {
+            biased;
+
+            line = lines.next_line() => {
+                let line = line.unwrap().unwrap();
+                let mut cmd = line.split_ascii_whitespace();
+                match cmd.next().unwrap() {
+                    "isready" => println!("readyok"),
+                    "teinewgame" => {
+                        let size = cmd.next().unwrap().parse().unwrap();
+                        let game = new_game(size, Options::default(size).unwrap()).unwrap();
+                        tx.send(Game(game)).unwrap();
+                    }
+                    "position" => {
+                        assert_eq!(cmd.next().unwrap(), "startpos");
+                        assert_eq!(cmd.next().unwrap(), "moves");
+
+                        assert!(
+                            history.iter().zip(cmd.by_ref()).all(|(curr, new)| curr == new),
+                            "undo not yet supported",
+                        );
+
+                        for m in cmd {
+                            // TODO: Sincere apologies
+                            tx.send(Play(m.to_string())).unwrap();
+                            history.push(m.to_string());
+                        }
+                    }
+                    "go" => {
+                        let time = Pair::default();
+                        let increment = Pair::default();
+
+                        while let Some(subcmd) = cmd.next() {
+                            let target = &mut match subcmd {
+                                "wtime" => time.white,
+                                "btime" => time.black,
+                                "winc" => increment.white,
+                                "binc" => increment.black,
+                                _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
+                            };
+
+                            *target = Duration::from_millis(cmd.next().unwrap().parse().unwrap());
+                        }
+
+                        tx.send(Search { time, increment }).unwrap();
+                    }
+
+                    _ => panic!(r#"unsupported command "{line}""#),
+                }
+            }
         }
     }
 }
