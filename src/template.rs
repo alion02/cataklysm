@@ -390,6 +390,10 @@ impl State {
             return Err(NewGameError);
         }
 
+        if !opt.tt_size.is_power_of_two() {
+            return Err(NewGameError);
+        }
+
         init();
 
         Ok(Self {
@@ -405,7 +409,7 @@ impl State {
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
             tt: std::iter::repeat(TtBucket::default())
-                .take(1 << 24)
+                .take(opt.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
         })
