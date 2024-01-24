@@ -1,3 +1,5 @@
+mod tei;
+
 use std::{
     env::{args, Args},
     io::stdin,
@@ -5,6 +7,8 @@ use std::{
 };
 
 use cataklysm::game::*;
+
+use tokio::runtime::Builder;
 
 fn main() {
     let mut args = args();
@@ -18,6 +22,11 @@ fn main() {
         "search" => search(args),
         "showmatch" => showmatch(args),
         "hashtest" => hashtest(args),
+        "tei" => Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(tei::run()),
         _ => help(),
     }
 }
@@ -106,6 +115,8 @@ fn hashtest(args: Args) {
 fn help() {
     println!(
         r#"usage:
+
+    tei
     perft "<tps>"
     search "<tps>"
     showmatch "<tps>"
@@ -116,8 +127,10 @@ fn help() {
 
 fn make_game(mut args: Args) -> Box<dyn Game> {
     let time = Instant::now();
-    let tps = args.next().unwrap();
-    let game = new_game(Options::from_position(Position::Tps(&tps)).unwrap()).unwrap();
+    let tps = &args.next().unwrap();
+    let size = size_of_tps(tps);
+    let mut game = new_game(size, Options::default(size).unwrap()).unwrap();
+    game.set_position(tps).unwrap();
     println!(
         "initialized in {:.1}ms",
         time.elapsed().as_secs_f64() * 1000.,

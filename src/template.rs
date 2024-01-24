@@ -380,74 +380,28 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        Self::new(Options::from_position(Position::Start(SIZE)).unwrap()).unwrap()
+        Self::new(Options::default(SIZE).unwrap()).unwrap()
     }
 }
 
 impl State {
     pub(crate) fn new(opt: Options) -> Result<Self, NewGameError> {
-        init();
-
-        let mut road = Pair::both(0);
-        let mut block = Pair::both(0);
-        let mut stones_left = opt.start_stones;
-        let mut caps_left = opt.start_caps;
-        let mut ply = 0;
-        let mut stacks = [Stack::EMPTY; ARR_LEN];
-
-        match opt.position {
-            Position::Start(s) => {
-                if s != SIZE {
-                    return Err(NewGameError);
-                }
-            }
-            Position::Tps(s) => {
-                use takparse::{Color, Piece, Tps};
-
-                let tps: Tps = s.parse().map_err(|_| NewGameError)?;
-                for (row, y) in tps.board_2d().zip((0..SIZE).rev()) {
-                    for (stack, x) in row.zip(0..SIZE) {
-                        if let Some(stack) = stack {
-                            let sq = sq(x + y * ROW_LEN);
-
-                            for color in stack.colors() {
-                                let color = color != Color::White;
-                                stacks[sq].drop(&mut Hand::one_piece(color), 1);
-                                stones_left[color] -= 1;
-                            }
-
-                            let top = stack.top();
-                            let color = stack.top_color() != Color::White;
-
-                            if matches!(top, Piece::Flat | Piece::Cap) {
-                                road[color] |= sq.bit();
-                            }
-                            if matches!(top, Piece::Wall | Piece::Cap) {
-                                block[color] |= sq.bit();
-                            }
-
-                            if top == Piece::Cap {
-                                stones_left[color] += 1; // Correct overcounting from the stack
-                                caps_left[color] -= 1;
-                            }
-                        }
-                    }
-                }
-
-                ply = tps.ply() as u32;
-            }
+        if opt.half_komi != 0 {
+            return Err(NewGameError);
         }
 
+        init();
+
         Ok(Self {
-            road,
-            block,
-            stones_left,
-            caps_left,
-            ply,
-            last_reversible: ply,
+            road: Pair::default(),
+            block: Pair::default(),
+            stones_left: opt.start_stones,
+            caps_left: opt.start_caps,
+            ply: 0,
+            last_reversible: 0,
             nodes: 0,
             generation: 0,
-            stacks,
+            stacks: [Stack::EMPTY; ARR_LEN],
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
             tt: std::iter::repeat(TtBucket::default())
@@ -1106,6 +1060,48 @@ impl Game for State {
         } else {
             Err(PlayActionError)
         }
+    }
+
+    fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError> {
+        use takparse::{Color, Piece, Tps};
+
+        if self.ply != 0 {
+            todo!()
+        }
+
+        let tps: Tps = tps.parse().map_err(|_| SetPositionError)?;
+        for (row, y) in tps.board_2d().zip((0..SIZE).rev()) {
+            for (stack, x) in row.zip(0..SIZE) {
+                if let Some(stack) = stack {
+                    let sq = sq(x + y * ROW_LEN);
+
+                    for color in stack.colors() {
+                        let color = color != Color::White;
+                        self.stacks[sq].drop(&mut Hand::one_piece(color), 1);
+                        self.stones_left[color] -= 1;
+                    }
+
+                    let top = stack.top();
+                    let color = stack.top_color() != Color::White;
+
+                    if matches!(top, Piece::Flat | Piece::Cap) {
+                        self.road[color] |= sq.bit();
+                    }
+                    if matches!(top, Piece::Wall | Piece::Cap) {
+                        self.block[color] |= sq.bit();
+                    }
+
+                    if top == Piece::Cap {
+                        self.stones_left[color] += 1; // Correct overcounting from the stack
+                        self.caps_left[color] -= 1;
+                    }
+                }
+            }
+        }
+
+        self.ply = tps.ply() as u32;
+
+        Ok(())
     }
 
     fn take_nodes(&mut self) -> u64 {

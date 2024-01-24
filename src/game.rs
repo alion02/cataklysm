@@ -2,30 +2,15 @@ use std::{any::Any, error::Error, fmt, ops::Neg};
 
 use crate::{hash::Hash, pair::Pair, state::*};
 
-pub enum Position<'a> {
-    Start(usize),
-    Tps(&'a str),
-}
-
-impl<'a> Position<'a> {
-    pub fn size(&self) -> usize {
-        match self {
-            Self::Start(s) => *s,
-            Self::Tps(t) => t.as_bytes().iter().filter(|&&c| c == b'/').count() + 1,
-        }
-    }
-}
-
-pub struct Options<'a> {
-    pub position: Position<'a>,
+pub struct Options {
     pub start_stones: Pair<u32>,
     pub start_caps: Pair<u32>,
     pub half_komi: i32,
 }
 
-impl<'a> Options<'a> {
-    pub fn from_position(position: Position<'a>) -> Option<Self> {
-        let (stones, caps) = match position.size() {
+impl Options {
+    pub fn default(size: usize) -> Option<Self> {
+        let (stones, caps) = match size {
             3 => (10, 0),
             4 => (15, 0),
             5 => (21, 1),
@@ -36,15 +21,10 @@ impl<'a> Options<'a> {
         };
 
         Some(Self {
-            position,
             start_stones: Pair::both(stones),
             start_caps: Pair::both(caps),
             half_komi: 0,
         })
-    }
-
-    pub fn from_tps(tps: &'a str) -> Option<Self> {
-        Self::from_position(Position::Tps(tps))
     }
 }
 
@@ -54,7 +34,7 @@ pub enum PerftMode {
     Batch,
 }
 
-pub trait Action: fmt::Display {
+pub trait Action: fmt::Display + Send {
     fn as_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
@@ -124,11 +104,15 @@ pub struct ParseActionError;
 #[derive(Debug)]
 pub struct PlayActionError;
 
-pub trait Game {
+#[derive(Debug)]
+pub struct SetPositionError;
+
+pub trait Game: Send {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
     fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Action>, ParseActionError>;
     fn play(&mut self, action: Box<dyn Action>) -> Result<(), PlayActionError>;
+    fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
     fn take_nodes(&mut self) -> u64;
     fn curr_hash(&mut self) -> Hash;
 }
@@ -141,10 +125,11 @@ impl fmt::Display for NewGameError {
         write!(f, "error instantiating a game")
     }
 }
+
 impl Error for NewGameError {}
 
-pub fn new_game(opt: Options) -> Result<Box<dyn Game>, NewGameError> {
-    Ok(match opt.position.size() {
+pub fn new_game(size: usize, opt: Options) -> Result<Box<dyn Game>, NewGameError> {
+    Ok(match size {
         #[cfg(feature = "3")]
         3 => Box::new(State3::new(opt)?),
         #[cfg(feature = "4")]
@@ -161,6 +146,10 @@ pub fn new_game(opt: Options) -> Result<Box<dyn Game>, NewGameError> {
     })
 }
 
+pub fn size_of_tps(tps: &str) -> usize {
+    tps.as_bytes().iter().filter(|&&c| c == b'/').count() + 1
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,14 +162,9 @@ mod tests {
     #[case(4, 21315929)]
     #[cfg_attr(not(debug_assertions), case(5, 1506310007))]
     fn perft_early(#[case] depth: u32, #[case] expected: u64) {
-        assert_eq!(
-            new_game(
-                Options::from_tps("x4,2C,1/x4,1C,x/x2,1S,1,121,x/x,2,x4/x3,2S,2S,x/2,x5 1 8")
-                    .unwrap()
-            )
-            .unwrap()
-            .perft(depth, PerftMode::Batch),
-            expected
-        );
+        let mut game = new_game(5, Options::default(5).unwrap()).unwrap();
+        game.set_position("x4,2C,1/x4,1C,x/x2,1S,1,121,x/x,2,x4/x3,2S,2S,x/2,x5 1 8")
+            .unwrap();
+        assert_eq!(game.perft(depth, PerftMode::Batch), expected);
     }
 }
