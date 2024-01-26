@@ -42,6 +42,10 @@ pub async fn run() {
             panic!()
         };
 
+        // Simplify control logic for search thread. Move the Game between the threads instead of
+        // making a convoluted message-passing mess. The search thread should only do the following:
+        // - check an abort flag
+        // - manage time controls
         let mut msg;
         'outer: loop {
             {
