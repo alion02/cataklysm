@@ -1,4 +1,10 @@
-use std::{any::Any, error::Error, fmt, ops::Neg};
+use std::{
+    any::Any,
+    error::Error,
+    fmt,
+    ops::Neg,
+    sync::{atomic::AtomicBool, Arc},
+};
 
 use crate::{hash::Hash, pair::Pair, state::*};
 
@@ -117,6 +123,7 @@ pub trait Game: Send {
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
     fn take_nodes(&mut self) -> u64;
     fn curr_hash(&mut self) -> Hash;
+    fn abort_flag(&mut self) -> Arc<AtomicBool>;
 }
 
 #[derive(Debug)]

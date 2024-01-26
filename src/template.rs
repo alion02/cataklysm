@@ -8,7 +8,10 @@ use std::{
         ControlFlow::{self, *},
         Index, IndexMut,
     },
-    sync::Mutex,
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc, Mutex,
+    },
 };
 
 use rand::{Rng, SeedableRng};
@@ -370,6 +373,8 @@ pub struct State {
     nodes: u64,
     generation: u32,
 
+    abort: Arc<AtomicBool>,
+
     stacks: [Stack; ARR_LEN],
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
 
@@ -405,6 +410,7 @@ impl State {
             last_reversible: 0,
             nodes: 0,
             generation: 0,
+            abort: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
@@ -910,6 +916,10 @@ impl State {
                         let mut f = {
                             #[inline(always)]
                             |s: &mut Self, action| {
+                                if s.abort.load(Relaxed) {
+                                    return Break(());
+                                }
+
                                 let score = -s
                                     .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
                                     .0;
@@ -949,6 +959,10 @@ impl State {
                         });
                     }
 
+                    if s.abort.load(Relaxed) {
+                        break 'ret;
+                    }
+
                     let bucket = &mut s.tt[idx];
                     let entry = if let Some(entry) = bucket.entry(sig) {
                         entry
@@ -974,6 +988,7 @@ impl State {
                         }
                     }
                 }
+
                 (best_score, Some(best_action))
             },
             |_, _| (Eval::ZERO, None),
@@ -1016,6 +1031,7 @@ impl Game for State {
         let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
 
         self.generation += 1;
+        self.abort.store(false, Relaxed);
 
         (score, action.map(|action| Box::new(action) as _))
     }
@@ -1114,6 +1130,10 @@ impl Game for State {
 
     fn curr_hash(&mut self) -> Hash {
         *self.hash_mut()
+    }
+
+    fn abort_flag(&mut self) -> Arc<AtomicBool> {
+        self.abort.clone()
     }
 }
 
