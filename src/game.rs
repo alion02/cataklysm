@@ -3,7 +3,10 @@ use std::{
     error::Error,
     fmt,
     ops::Neg,
-    sync::{atomic::AtomicBool, Arc},
+    sync::{
+        atomic::{AtomicBool, Ordering::Relaxed},
+        Arc,
+    },
 };
 
 use crate::{hash::Hash, pair::Pair, state::*};
@@ -120,6 +123,18 @@ pub struct PlayActionError;
 #[derive(Debug)]
 pub struct SetPositionError;
 
+pub struct AbortFlag(Arc<AtomicBool>);
+
+impl AbortFlag {
+    pub fn new(flag: &Arc<AtomicBool>) -> Self {
+        Self(flag.clone())
+    }
+
+    pub fn set(self) {
+        self.0.store(true, Relaxed);
+    }
+}
+
 pub trait Game: Send {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn search(&mut self, depth: u32) -> (Eval, Box<dyn Action>);
@@ -128,7 +143,8 @@ pub trait Game: Send {
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
     fn take_nodes(&mut self) -> u64;
     fn curr_hash(&mut self) -> Hash;
-    fn abort_flag(&mut self) -> Arc<AtomicBool>;
+    fn abort_flag(&mut self) -> AbortFlag;
+    fn clear_abort_flag(&mut self) -> bool;
 }
 
 #[derive(Debug)]

@@ -1135,8 +1135,14 @@ impl Game for State {
         *self.hash_mut()
     }
 
-    fn abort_flag(&mut self) -> Arc<AtomicBool> {
-        self.abort.clone()
+    fn abort_flag(&mut self) -> AbortFlag {
+        AbortFlag::new(&self.abort)
+    }
+
+    fn clear_abort_flag(&mut self) -> bool {
+        self.abort
+            .compare_exchange(true, false, Relaxed, Relaxed)
+            .is_ok()
     }
 }
 

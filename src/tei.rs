@@ -50,11 +50,7 @@ pub async fn run() {
                 // FIXME: Mate scores
                 println!("info depth {} pv {} score cp {}", d, action, eval.raw(),);
 
-                if game
-                    .abort_flag()
-                    .compare_exchange(true, false, Relaxed, Relaxed)
-                    .is_ok()
-                {
+                if game.clear_abort_flag() {
                     println!("info string search aborted");
                     break;
                 }
