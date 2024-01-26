@@ -868,13 +868,13 @@ impl State {
         Eval::new(eval_half(color) - eval_half(!color) + 17)
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> (Eval, Option<Action>) {
+    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> Eval {
         self.nodes += 1;
         self.status(
             (),
             |_, s| {
                 if depth == 0 {
-                    return (s.eval(), None);
+                    return s.eval();
                 }
 
                 let original_alpha = alpha;
@@ -902,7 +902,6 @@ impl State {
 
                                 if alpha >= beta {
                                     best_score = score;
-                                    best_action = entry.action;
                                     entry.packed.set_generation(s.generation);
                                     break 'ret;
                                 }
@@ -920,9 +919,8 @@ impl State {
                                     return Break(());
                                 }
 
-                                let score = -s
-                                    .with(true, action, |s| s.search(depth - 1, -beta, -alpha))
-                                    .0;
+                                let score =
+                                    -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
 
                                 if score > best_score {
                                     best_score = score;
@@ -989,11 +987,11 @@ impl State {
                     }
                 }
 
-                (best_score, Some(best_action))
+                best_score
             },
-            |_, _| (Eval::ZERO, None),
-            |_, s| (Eval::win(s.ply), None),
-            |_, s| (Eval::loss(s.ply), None),
+            |_, _| Eval::ZERO,
+            |_, s| Eval::win(s.ply),
+            |_, s| Eval::loss(s.ply),
         )
     }
 }
@@ -1027,13 +1025,18 @@ impl Game for State {
         }
     }
 
-    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn GameAction>>) {
-        let (score, action) = self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+    fn search(&mut self, depth: u32) -> (Eval, Box<dyn GameAction>) {
+        assert!(depth > 0);
+
+        self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
 
         self.generation += 1;
-        self.abort.store(false, Relaxed);
 
-        (score, action.map(|action| Box::new(action) as _))
+        let (idx, sig) = self.hash_mut().split(self.tt.len());
+        let bucket = &mut self.tt[idx];
+        let entry = bucket.entry(sig).unwrap();
+
+        (entry.score, Box::new(entry.action))
     }
 
     fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn GameAction>, ParseActionError> {

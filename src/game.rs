@@ -104,6 +104,11 @@ impl Eval {
     pub fn abs(self) -> Self {
         Self(self.0.abs())
     }
+
+    #[inline(always)]
+    pub fn raw(self) -> i32 {
+        self.0
+    }
 }
 
 #[derive(Debug)]
@@ -117,7 +122,7 @@ pub struct SetPositionError;
 
 pub trait Game: Send {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
-    fn search(&mut self, depth: u32) -> (Eval, Option<Box<dyn Action>>);
+    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Action>);
     fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Action>, ParseActionError>;
     fn play(&mut self, action: Box<dyn Action>) -> Result<(), PlayActionError>;
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;

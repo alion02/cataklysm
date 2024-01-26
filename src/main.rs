@@ -63,7 +63,7 @@ fn search(args: Args) {
 
         println!(
             "depth {d}: {} (eval: {eval}), {nodes} nodes in {secs:.2}s ({:.2} Mnps)",
-            action.unwrap(),
+            action,
             nps / 1_000_000.,
         );
 
@@ -76,22 +76,30 @@ fn search(args: Args) {
 fn showmatch(args: Args) {
     let mut game = make_game(args);
     loop {
-        let mut chosen = None;
-        for d in 1..8 {
-            let (eval, action) = game.search(d);
-            chosen = action;
+        let mut action;
+        let mut d = 1;
+        loop {
+            let eval;
+            (eval, action) = game.search(d);
+
             if eval.is_decisive() {
+                break;
+            }
+
+            d += 1;
+            if d > 7 {
                 break;
             }
         }
 
-        let Some(chosen) = chosen else {
+        println!("{action}");
+        game.play(action).unwrap();
+
+        // FIXME: Aborts game too early
+        if d == 1 {
             println!("game finished");
             break;
-        };
-
-        println!("{chosen}");
-        game.play(chosen).unwrap();
+        }
     }
 }
 
