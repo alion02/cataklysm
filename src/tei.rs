@@ -1,16 +1,32 @@
 use std::{
-    sync::atomic::Ordering::Relaxed,
     thread::spawn,
     time::{Duration, Instant},
 };
 
-use cataklysm::game::*;
+use cataklysm::{game::*, pair::Pair};
 
 use tokio::{
     io::{stdin, AsyncBufReadExt, BufReader},
     select,
-    sync::mpsc::{error::TryRecvError, unbounded_channel},
+    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
 };
+
+struct State {
+    rx: UnboundedReceiver<Box<dyn Game>>,
+    tx: UnboundedSender<Search>,
+    history: Vec<String>, // TODO: Use Box<dyn Action>?
+    game: Option<Box<dyn Game>>,
+    flag: Option<AbortFlag>,
+}
+
+impl State {
+    async fn abort(&mut self) {
+        if let Some(flag) = self.flag.take() {
+            flag.set();
+            self.game = Some(self.rx.recv().await.unwrap());
+        }
+    }
+}
 
 struct Search {
     game: Box<dyn Game>,
@@ -80,62 +96,88 @@ pub async fn run() {
         }
     });
 
-    // let rx = recv.1;
-    // let tx = send.0;
+    let mut state = State {
+        rx: recv.1,
+        tx: send.0,
+        history: Vec::with_capacity(256),
+        game: None,
+        flag: None,
+    };
 
-    // let mut history = vec![];
+    loop {
+        select! {
+            biased;
 
-    // loop {
-    //     select! {
-    //         biased;
+            line = lines.next_line() => {
+                let line = line.unwrap().unwrap();
+                let mut cmd = line.split_ascii_whitespace();
+                match cmd.next().unwrap() {
+                    "isready" => println!("readyok"),
+                    "teinewgame" => {
+                        let size = cmd.next().unwrap().parse().unwrap();
 
-    //         line = lines.next_line() => {
-    //             let line = line.unwrap().unwrap();
-    //             let mut cmd = line.split_ascii_whitespace();
-    //             match cmd.next().unwrap() {
-    //                 "isready" => println!("readyok"),
-    //                 "teinewgame" => {
-    //                     let size = cmd.next().unwrap().parse().unwrap();
-    //                     let game = new_game(size, Options::default(size).unwrap()).unwrap();
-    //                     tx.send(Game(game)).unwrap();
-    //                 }
-    //                 "position" => {
-    //                     assert_eq!(cmd.next().unwrap(), "startpos");
-    //                     assert_eq!(cmd.next().unwrap(), "moves");
+                        state.abort().await;
+                        state.history.clear();
+                        state.game = Some(new_game(size, Options::default(size).unwrap()).unwrap());
+                    }
+                    "position" => {
+                        assert_eq!(cmd.next().unwrap(), "startpos");
+                        assert_eq!(cmd.next().unwrap(), "moves");
 
-    //                     assert!(
-    //                         history.iter().zip(cmd.by_ref()).all(|(curr, new)| curr == new),
-    //                         "undo not yet supported",
-    //                     );
+                        assert!(
+                            state.history
+                                .iter()
+                                .zip(cmd.by_ref())
+                                .all(|(curr, new)| curr == new),
+                            "undo not yet supported",
+                        );
 
-    //                     for m in cmd {
-    //                         // TODO: Sincere apologies
-    //                         tx.send(Play(m.to_string())).unwrap();
-    //                         history.push(m.to_string());
-    //                     }
-    //                 }
-    //                 "go" => {
-    //                     let time = Pair::default();
-    //                     let increment = Pair::default();
+                        let game = state.game.as_mut().unwrap();
+                        for m in cmd {
+                            let action = game.parse_action(m).unwrap();
+                            game.play(action).unwrap();
+                            state.history.push(m.to_string());
+                        }
+                    }
+                    "go" => {
+                        let time = Pair::default();
+                        let increment = Pair::default();
 
-    //                     while let Some(subcmd) = cmd.next() {
-    //                         let target = &mut match subcmd {
-    //                             "wtime" => time.white,
-    //                             "btime" => time.black,
-    //                             "winc" => increment.white,
-    //                             "binc" => increment.black,
-    //                             _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
-    //                         };
+                        while let Some(subcmd) = cmd.next() {
+                            let target = &mut match subcmd {
+                                "wtime" => time.white,
+                                "btime" => time.black,
+                                "winc" => increment.white,
+                                "binc" => increment.black,
+                                _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
+                            };
 
-    //                         *target = Duration::from_millis(cmd.next().unwrap().parse().unwrap());
-    //                     }
+                            *target = Duration::from_millis(cmd.next().unwrap().parse().unwrap());
+                        }
 
-    //                     tx.send(Search { time, increment }).unwrap();
-    //                 }
+                        // TODO: Compute time target
+                        let time_target = Duration::from_secs(5);
 
-    //                 _ => panic!(r#"unsupported command "{line}""#),
-    //             }
-    //         }
-    //     }
-    // }
+                        state.abort().await;
+
+                        let Some(mut game) = state.game.take() else {
+                            panic!("no game to search on")
+                        };
+                        state.flag = Some(game.abort_flag());
+                        state.tx.send(Search { game, time_target }).unwrap();
+                    }
+                    "quit" => {
+                        state.abort().await;
+                        break;
+                    }
+                    "stop" => state.abort().await,
+                    _ => panic!(r#"unsupported command "{line}""#),
+                }
+            }
+            game = state.rx.recv() => {
+                state.flag = None;
+                state.game = Some(game.unwrap());
+            }
+        }
+    }
 }
