@@ -28,6 +28,7 @@ tokio = { version = "1.35.1", features = [
 	"io-util",
 	"sync",
 	"macros",
+	"time",
 ] }
 takparse = "0.6.0"
 

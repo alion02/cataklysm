@@ -1,7 +1,4 @@
-use std::{
-    thread::spawn,
-    time::{Duration, Instant},
-};
+use std::{pin::Pin, thread::spawn};
 
 use cataklysm::{game::*, pair::Pair};
 
@@ -9,7 +6,12 @@ use tokio::{
     io::{stdin, AsyncBufReadExt, BufReader},
     select,
     sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    time::{sleep, Duration, Instant, Sleep},
 };
+
+// FIXME
+const FOREVER: Duration = Duration::from_secs(60 * 60 * 24 * 365); // 1 year
+const ABORT_MARGIN: Duration = Duration::from_millis(20);
 
 struct State {
     rx: UnboundedReceiver<Box<dyn Game>>,
@@ -18,13 +20,22 @@ struct State {
     game: Option<Box<dyn Game>>,
     flag: Option<AbortFlag>,
     debug: bool,
+    timeout: Pin<Box<Sleep>>,
 }
 
 impl State {
     async fn abort(&mut self) {
         if let Some(flag) = self.flag.take() {
             flag.set();
+
+            let start = Instant::now();
+
             self.game = Some(self.rx.recv().await.unwrap());
+            self.timeout.as_mut().reset(start + FOREVER);
+
+            if self.debug {
+                println!("info string search aborted in {:?}", start.elapsed());
+            }
         }
     }
 }
@@ -66,10 +77,15 @@ pub async fn run() {
                 let elapsed = start.elapsed();
 
                 // FIXME: Mate scores
-                println!("info depth {} pv {} score cp {}", d, action, eval.raw(),);
+                println!(
+                    "info depth {} time {} pv {} score cp {}",
+                    d,
+                    elapsed.as_millis(),
+                    action,
+                    eval.raw(),
+                );
 
                 if game.clear_abort_flag() {
-                    println!("info string search aborted");
                     break;
                 }
 
@@ -105,6 +121,7 @@ pub async fn run() {
         game: None,
         flag: None,
         debug: false,
+        timeout: Box::pin(sleep(FOREVER)),
     };
 
     loop {
@@ -175,11 +192,16 @@ pub async fn run() {
                         // Assume 2/3 of the moves are placements.
                         let expected_moves_left = game.stones_left()[color] * 3 / 2;
 
+                        // FIXME: Does not handle 0 increment well. Negative Duration not allowed.
                         let time_target = (time[color] + increment[color] * expected_moves_left) /
                             expected_moves_left;
 
                         state.flag = Some(game.abort_flag());
                         state.tx.send(Search { game, start, time_target }).unwrap();
+
+                        state.timeout.as_mut().reset(
+                            start + time[color] - ABORT_MARGIN
+                        );
 
                         if state.debug {
                             println!("info string target time = {time_target:?}");
@@ -197,6 +219,7 @@ pub async fn run() {
                 state.flag = None;
                 state.game = Some(game.unwrap());
             }
+            _ = state.timeout.as_mut() => state.abort().await,
         }
     }
 }
