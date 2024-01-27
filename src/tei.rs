@@ -128,6 +128,11 @@ pub async fn run() {
         select! {
             biased;
 
+            game = state.rx.recv() => {
+                state.flag = None;
+                state.game = Some(game.unwrap());
+            }
+            _ = state.timeout.as_mut() => state.abort().await,
             line = lines.next_line() => {
                 let line = line.unwrap().unwrap();
                 let mut cmd = line.split_ascii_whitespace();
@@ -215,11 +220,6 @@ pub async fn run() {
                     _ => panic!(r#"unsupported command "{line}""#),
                 }
             }
-            game = state.rx.recv() => {
-                state.flag = None;
-                state.game = Some(game.unwrap());
-            }
-            _ = state.timeout.as_mut() => state.abort().await,
         }
     }
 }
