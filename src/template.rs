@@ -1144,6 +1144,18 @@ impl Game for State {
             .compare_exchange(true, false, Relaxed, Relaxed)
             .is_ok()
     }
+
+    fn stones_left(&mut self) -> Pair<u32> {
+        self.stones_left
+    }
+
+    fn caps_left(&mut self) -> Pair<u32> {
+        self.caps_left
+    }
+
+    fn active_color(&mut self) -> bool {
+        self.color()
+    }
 }
 
 #[cfg(test)]

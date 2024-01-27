@@ -145,6 +145,9 @@ pub trait Game: Send {
     fn curr_hash(&mut self) -> Hash;
     fn abort_flag(&mut self) -> AbortFlag;
     fn clear_abort_flag(&mut self) -> bool;
+    fn stones_left(&mut self) -> Pair<u32>;
+    fn caps_left(&mut self) -> Pair<u32>;
+    fn active_color(&mut self) -> bool;
 }
 
 #[derive(Debug)]

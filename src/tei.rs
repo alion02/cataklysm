@@ -17,6 +17,7 @@ struct State {
     history: Vec<String>, // TODO: Use Box<dyn Action>?
     game: Option<Box<dyn Game>>,
     flag: Option<AbortFlag>,
+    debug: bool,
 }
 
 impl State {
@@ -30,6 +31,7 @@ impl State {
 
 struct Search {
     game: Box<dyn Game>,
+    start: Instant,
     time_target: Duration,
 }
 
@@ -49,10 +51,10 @@ pub async fn run() {
 
         while let Some(Search {
             mut game,
+            start,
             time_target,
         }) = rx.blocking_recv()
         {
-            let start = Instant::now();
             let mut action;
             let mut depth_times = [0.0f64; 3];
             let mut d = 1;
@@ -102,6 +104,7 @@ pub async fn run() {
         history: Vec::with_capacity(256),
         game: None,
         flag: None,
+        debug: false,
     };
 
     loop {
@@ -113,6 +116,13 @@ pub async fn run() {
                 let mut cmd = line.split_ascii_whitespace();
                 match cmd.next().unwrap() {
                     "isready" => println!("readyok"),
+                    "debug" => {
+                        state.debug = match cmd.next().unwrap() {
+                            "on" => true,
+                            "off" => false,
+                            _ => panic!("malformed debug command"),
+                        };
+                    }
                     "teinewgame" => {
                         let size = cmd.next().unwrap().parse().unwrap();
 
@@ -132,7 +142,7 @@ pub async fn run() {
                             "undo not yet supported",
                         );
 
-                        let game = state.game.as_mut().unwrap();
+                        let game = state.game.as_mut().expect("can't switch position");
                         for m in cmd {
                             let action = game.parse_action(m).unwrap();
                             game.play(action).unwrap();
@@ -140,31 +150,40 @@ pub async fn run() {
                         }
                     }
                     "go" => {
-                        let time = Pair::default();
-                        let increment = Pair::default();
+                        let start = Instant::now();
+
+                        let mut game = state.game.take().expect("can't start search");
+
+                        let mut time = Pair::default();
+                        let mut increment = Pair::default();
 
                         while let Some(subcmd) = cmd.next() {
-                            let target = &mut match subcmd {
-                                "wtime" => time.white,
-                                "btime" => time.black,
-                                "winc" => increment.white,
-                                "binc" => increment.black,
+                            let target = match subcmd {
+                                "wtime" => &mut time.white,
+                                "btime" => &mut time.black,
+                                "winc" => &mut increment.white,
+                                "binc" => &mut increment.black,
                                 _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
                             };
 
                             *target = Duration::from_millis(cmd.next().unwrap().parse().unwrap());
                         }
 
-                        // TODO: Compute time target
-                        let time_target = Duration::from_secs(5);
+                        let color = game.active_color();
 
-                        state.abort().await;
+                        // TODO: Improve?
+                        // Assume 2/3 of the moves are placements.
+                        let expected_moves_left = game.stones_left()[color] * 3 / 2;
 
-                        let Some(mut game) = state.game.take() else {
-                            panic!("no game to search on")
-                        };
+                        let time_target = (time[color] + increment[color] * expected_moves_left) /
+                            expected_moves_left;
+
                         state.flag = Some(game.abort_flag());
-                        state.tx.send(Search { game, time_target }).unwrap();
+                        state.tx.send(Search { game, start, time_target }).unwrap();
+
+                        if state.debug {
+                            println!("info string target time = {time_target:?}");
+                        }
                     }
                     "quit" => {
                         state.abort().await;
