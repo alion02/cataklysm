@@ -164,6 +164,7 @@ pub async fn run() {
                             "undo not yet supported",
                         );
 
+                        state.abort().await;
                         let game = state.game.as_mut().expect("can't switch position");
                         for m in cmd {
                             let action = game.parse_action(m).unwrap();
@@ -174,6 +175,7 @@ pub async fn run() {
                     "go" => {
                         let start = Instant::now();
 
+                        state.abort().await;
                         let mut game = state.game.take().expect("can't start search");
 
                         let mut time = Pair::default();
