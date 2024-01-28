@@ -202,6 +202,7 @@ pub async fn run() {
                             expected_moves_left;
 
                         state.flag = Some(game.abort_flag());
+                        game.clear_abort_flag();
                         state.tx.send(Search { game, start, time_target }).unwrap();
 
                         state.timeout.as_mut().reset(
