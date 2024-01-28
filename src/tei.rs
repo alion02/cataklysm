@@ -12,6 +12,7 @@ use tokio::{
 // FIXME
 const FOREVER: Duration = Duration::from_secs(60 * 60 * 24 * 365); // 1 year
 const ABORT_MARGIN: Duration = Duration::from_millis(20);
+const MAX_DEPTH: u32 = 60;
 
 struct State {
     rx: UnboundedReceiver<Box<dyn Game>>,
@@ -106,6 +107,10 @@ pub async fn run() {
                 };
 
                 if expected_time > time_target {
+                    break;
+                }
+
+                if d > MAX_DEPTH {
                     break;
                 }
             }
