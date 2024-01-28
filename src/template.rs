@@ -374,6 +374,7 @@ pub struct State {
     generation: u32,
 
     abort: Arc<AtomicBool>,
+    abort_inactive: Arc<AtomicBool>,
 
     stacks: [Stack; ARR_LEN],
     hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
@@ -411,6 +412,7 @@ impl State {
             nodes: 0,
             generation: 0,
             abort: Arc::new(AtomicBool::new(false)),
+            abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
@@ -1143,6 +1145,10 @@ impl Game for State {
         self.abort
             .compare_exchange(true, false, Relaxed, Relaxed)
             .is_ok()
+    }
+
+    fn swap_abort_flags(&mut self) {
+        std::mem::swap(&mut self.abort, &mut self.abort_inactive);
     }
 
     fn stones_left(&mut self) -> Pair<u32> {

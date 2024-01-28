@@ -13,6 +13,7 @@ use tokio::{
 const FOREVER: Duration = Duration::from_secs(60 * 60 * 24 * 365); // 1 year
 const ABORT_MARGIN: Duration = Duration::from_millis(20);
 const MAX_DEPTH: u32 = 60;
+const IGNORE_ABORT_DEPTH: u32 = 2;
 
 struct State {
     rx: UnboundedReceiver<Box<dyn Game>>,
@@ -72,6 +73,9 @@ pub async fn run() {
             let mut depth_times = [0.0f64; 3];
             let mut d = 1;
 
+            // Prevent reading the abort flag at the start
+            game.swap_abort_flags();
+
             loop {
                 let eval;
                 (eval, action) = game.search(d);
@@ -86,6 +90,11 @@ pub async fn run() {
                     action,
                     eval.raw(),
                 );
+
+                // Restore the abort flag if we reach the target minimum depth
+                if d == IGNORE_ABORT_DEPTH {
+                    game.swap_abort_flags();
+                }
 
                 if game.clear_abort_flag() {
                     break;
