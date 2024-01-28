@@ -202,7 +202,7 @@ pub async fn run() {
 
                         // FIXME: Does not handle 0 increment well. Negative Duration not allowed.
                         let time_target = (time[color] + increment[color] * expected_moves_left) /
-                            expected_moves_left;
+                            (expected_moves_left + 1);
 
                         state.flag = Some(game.abort_flag());
                         game.clear_abort_flag();
