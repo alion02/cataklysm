@@ -25,18 +25,19 @@ struct State {
 
 impl State {
     async fn abort(&mut self) {
+        let start = Instant::now();
+
         if let Some(flag) = self.flag.take() {
             flag.set();
 
-            let start = Instant::now();
-
             self.game = Some(self.rx.recv().await.unwrap());
-            self.timeout.as_mut().reset(start + FOREVER);
 
             if self.debug {
                 println!("info string search aborted in {:?}", start.elapsed());
             }
         }
+
+        self.timeout.as_mut().reset(start + FOREVER);
     }
 }
 
