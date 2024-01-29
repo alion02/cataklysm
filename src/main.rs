@@ -123,13 +123,11 @@ fn hashtest(args: Args) {
 fn help() {
     println!(
         r#"usage:
-
     tei
     perft "<tps>"
     search "<tps>"
     showmatch "<tps>"
-    hashtest "<tps>"
-    "#
+    hashtest "<tps>""#
     );
 }
 
