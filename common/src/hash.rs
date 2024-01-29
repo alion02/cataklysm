@@ -17,6 +17,7 @@ impl Hash {
     /// # Panics
     ///
     /// The method may panic if the `len` provided is zero or is not a power of two.
+    #[inline]
     pub fn split(self, len: usize) -> (usize, u64) {
         debug_assert!(len.is_power_of_two());
         (self.0 as usize & len - 1, self.0)
@@ -40,6 +41,7 @@ impl BitXorAssign for Hash {
 }
 
 impl Distribution<Hash> for Standard {
+    #[inline]
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Hash {
         Hash(rng.gen())
     }
