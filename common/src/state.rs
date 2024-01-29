@@ -76,21 +76,3 @@ impl Neg for Direction {
         unsafe { transmute(self as u32 ^ 2) }
     }
 }
-
-// #[cfg(feature = "3")]
-// state!(size3 => State3);
-
-// #[cfg(feature = "4")]
-// state!(size4 => State4);
-
-// #[cfg(feature = "5")]
-// state!(size5 => State5);
-
-// #[cfg(feature = "6")]
-// state!(size6 => State6);
-
-// #[cfg(feature = "7")]
-// state!(size7 => State7);
-
-// #[cfg(feature = "8")]
-// state!(size8 => State8);
