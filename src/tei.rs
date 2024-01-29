@@ -1,6 +1,7 @@
 use std::{pin::Pin, thread::spawn};
 
-use cataklysm::{game::*, pair::Pair};
+use crate::game::new_game;
+use common::{game::*, pair::Pair};
 
 use tokio::{
     io::{stdin, AsyncBufReadExt, BufReader},

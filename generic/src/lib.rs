@@ -1,4 +1,7 @@
-#![allow(clippy::items_after_test_module)]
+#![allow(
+	clippy::precedence, // Personal opinion
+	clippy::comparison_chain, // Required for optimal performance at the time of writing
+)]
 
 use std::{
     any::Any,
@@ -14,10 +17,20 @@ use std::{
     },
 };
 
-use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
+#[cfg(feature = "3")]
+use common::size::size3::*;
+#[cfg(feature = "4")]
+use common::size::size4::*;
+#[cfg(feature = "5")]
+use common::size::size5::*;
+#[cfg(feature = "6")]
+use common::size::size6::*;
+#[cfg(feature = "7")]
+use common::size::size7::*;
+#[cfg(feature = "8")]
+use common::size::size8::*;
 
-use crate::{
+use common::{
     game::{Action as GameAction, *},
     hash::*,
     pair::*,
@@ -25,6 +38,9 @@ use crate::{
     state::{Direction::*, Piece::*, *},
     util::*,
 };
+
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha20Rng;
 
 static INIT: Mutex<bool> = Mutex::new(false);
 
@@ -391,7 +407,7 @@ impl Default for State {
 }
 
 impl State {
-    pub(crate) fn new(opt: Options) -> Result<Self, NewGameError> {
+    pub fn new(opt: Options) -> Result<Self, NewGameError> {
         if opt.half_komi != 0 {
             return Err(NewGameError);
         }
@@ -1176,7 +1192,3 @@ mod tests {
         }
     }
 }
-
-// $end_template
-
-use crate::size::size6::*;

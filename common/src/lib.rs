@@ -10,7 +10,3 @@ pub mod size;
 pub mod stack;
 pub mod state;
 pub mod util;
-
-// Hide the template module behind a feature indicated as private
-#[cfg(feature = "__template")]
-mod template;
