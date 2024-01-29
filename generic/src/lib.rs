@@ -287,6 +287,8 @@ impl Action {
         )
     }
 
+    // `self.0 as u32` is unnecessary iff Action is backed by u32
+    #[allow(clippy::unnecessary_cast)]
     fn branch<S, R>(
         self,
         state: S,
