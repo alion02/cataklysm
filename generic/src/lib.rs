@@ -474,15 +474,8 @@ impl State {
         let is_opening = self.is_opening();
 
         'skip_nobles: {
-            let mut for_placements = {
-                #[inline(always)]
-                |acc, piece| {
-                    bit_squares(empty).try_fold(
-                        acc,
-                        #[inline(always)]
-                        |acc, sq| f(acc, self, Action::place(sq, piece)),
-                    )
-                }
+            let mut for_placements = |acc, piece| {
+                bit_squares(empty).try_fold(acc, |acc, sq| f(acc, self, Action::place(sq, piece)))
             };
 
             if has_stones {
@@ -509,45 +502,42 @@ impl State {
 
                 debug_assert_ne!(max_pieces, 0);
 
-                let mut spread = {
-                    #[inline(always)]
-                    |mut acc, dir| {
-                        let ray = ray(src, dir);
-                        let ray_hits = ray & block;
-                        let ray_hit = closest_hit(ray_hits, dir);
+                let mut spread = |mut acc, dir| {
+                    let ray = ray(src, dir);
+                    let ray_hits = ray & block;
+                    let ray_hit = closest_hit(ray_hits, dir);
 
-                        let range = if ray_hit != 0 {
-                            distance(src, sq(ray_hit.trailing_zeros() as usize), dir) - 1
-                        } else {
-                            ray.count_ones()
-                        };
+                    let range = if ray_hit != 0 {
+                        distance(src, sq(ray_hit.trailing_zeros() as usize), dir) - 1
+                    } else {
+                        ray.count_ones()
+                    };
 
-                        let mut do_spreads = |mut acc, mut pattern, range, limit| {
-                            if range > 0 {
-                                while pattern < limit {
-                                    acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
+                    let mut do_spreads = |mut acc, mut pattern, range, limit| {
+                        if range > 0 {
+                            while pattern < limit {
+                                acc = f(acc, self, Action::spread(src, dir, pat(pattern)))?;
 
-                                    pattern += if pattern.count_ones() == range {
-                                        pattern & pattern.wrapping_neg()
-                                    } else {
-                                        start_bit
-                                    };
-                                }
+                                pattern += if pattern.count_ones() == range {
+                                    pattern & pattern.wrapping_neg()
+                                } else {
+                                    start_bit
+                                };
                             }
-
-                            Continue(acc)
-                        };
-
-                        if is_cap && ray_hit & !cap != 0 {
-                            // Smash possible
-                            acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
-                            acc = do_spreads(acc, 1 << HAND - 1, range + 1, 1 << HAND)?;
-                        } else {
-                            acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                         }
 
                         Continue(acc)
+                    };
+
+                    if is_cap && ray_hit & !cap != 0 {
+                        // Smash possible
+                        acc = do_spreads(acc, start_bit, range, 1 << HAND - 1)?;
+                        acc = do_spreads(acc, 1 << HAND - 1, range + 1, 1 << HAND)?;
+                    } else {
+                        acc = do_spreads(acc, start_bit, range, 1 << HAND)?;
                     }
+
+                    Continue(acc)
                 };
 
                 acc = spread(acc, Right)?;
@@ -932,30 +922,27 @@ impl State {
                             Action::pass()
                         };
 
-                        let mut f = {
-                            #[inline(always)]
-                            |s: &mut Self, action| {
-                                if s.abort.load(Relaxed) {
-                                    return Break(());
-                                }
+                        let mut f = |s: &mut Self, action| {
+                            if s.abort.load(Relaxed) {
+                                return Break(());
+                            }
 
-                                let score =
-                                    -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
+                            let score =
+                                -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
 
-                                if score > best_score {
-                                    best_score = score;
-                                    best_action = action;
-                                    if score > alpha {
-                                        alpha = score;
-                                        if alpha >= beta {
-                                            s.killers[s.ply] = action;
-                                            return Break(());
-                                        }
+                            if score > best_score {
+                                best_score = score;
+                                best_action = action;
+                                if score > alpha {
+                                    alpha = score;
+                                    if alpha >= beta {
+                                        s.killers[s.ply] = action;
+                                        return Break(());
                                     }
                                 }
-
-                                Continue(())
                             }
+
+                            Continue(())
                         };
 
                         if s.is_legal(tt_action) && f(s, tt_action).is_break() {

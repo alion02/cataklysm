@@ -15,7 +15,6 @@ pub struct Pair<T> {
 impl<T> Index<bool> for Pair<T> {
     type Output = T;
 
-    #[inline(always)]
     fn index(&self, index: bool) -> &T {
         match index {
             WHITE => &self.white,
@@ -25,7 +24,6 @@ impl<T> Index<bool> for Pair<T> {
 }
 
 impl<T> IndexMut<bool> for Pair<T> {
-    #[inline(always)]
     fn index_mut(&mut self, index: bool) -> &mut T {
         match index {
             WHITE => &mut self.white,
@@ -35,12 +33,10 @@ impl<T> IndexMut<bool> for Pair<T> {
 }
 
 impl<T> Pair<T> {
-    #[inline(always)]
     pub fn new(white: T, black: T) -> Self {
         Self { white, black }
     }
 
-    #[inline(always)]
     pub fn get(self, color: bool) -> (T, T) {
         match color {
             WHITE => (self.white, self.black),
@@ -48,7 +44,6 @@ impl<T> Pair<T> {
         }
     }
 
-    #[inline(always)]
     pub fn get_ref(&self, color: bool) -> (&T, &T) {
         match color {
             WHITE => (&self.white, &self.black),
@@ -56,7 +51,6 @@ impl<T> Pair<T> {
         }
     }
 
-    #[inline(always)]
     pub fn get_mut(&mut self, color: bool) -> (&mut T, &mut T) {
         match color {
             WHITE => (&mut self.white, &mut self.black),
@@ -66,7 +60,6 @@ impl<T> Pair<T> {
 }
 
 impl<T: Copy> Pair<T> {
-    #[inline(always)]
     pub fn both(value: T) -> Self {
         Self {
             white: value,

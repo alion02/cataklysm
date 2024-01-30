@@ -70,7 +70,6 @@ impl fmt::Display for Eval {
 impl Neg for Eval {
     type Output = Self;
 
-    #[inline(always)]
     fn neg(self) -> Self::Output {
         Self(-self.0)
     }
@@ -81,34 +80,28 @@ impl Eval {
     pub const DECISIVE: Self = Self(1 << 16);
     pub const MAX: Self = Self(1 << 24);
 
-    #[inline(always)]
     pub fn new(value: i32) -> Self {
         let eval = Self(value);
         debug_assert!(eval.abs() <= Self::MAX);
         eval
     }
 
-    #[inline(always)]
     pub fn win(ply: u32) -> Eval {
         Self::new(Self::MAX.0 - ply as i32)
     }
 
-    #[inline(always)]
     pub fn loss(ply: u32) -> Eval {
         Self::new(ply as i32 - Self::MAX.0)
     }
 
-    #[inline(always)]
     pub fn is_decisive(self) -> bool {
         self.abs() >= Self::DECISIVE
     }
 
-    #[inline(always)]
     pub fn abs(self) -> Self {
         Self(self.0.abs())
     }
 
-    #[inline(always)]
     pub fn raw(self) -> i32 {
         self.0
     }
