@@ -7,6 +7,7 @@ extern crate alloc;
 
 mod lut;
 mod prelude;
+mod square;
 
 use crate::prelude::*;
 
@@ -38,20 +39,12 @@ const COL: Bitboard = {
 
 const BOARD: Bitboard = ROW * COL;
 
-fn row(sq: Square) -> Bitboard {
-    ROW << sq.row().0
-}
-
-fn col(sq: Square) -> Bitboard {
-    COL << sq.col().0
-}
-
 fn ray(src: Square, dir: Direction) -> Bitboard {
     match dir {
-        Right => row(src) & !1 << src.0,
-        Up => col(src) & !1 << src.0,
-        Left => row(src) & (1 << src.0) - 1,
-        Down => col(src) & (1 << src.0) - 1,
+        Right => src.row_bitboard() & !1 << src.0,
+        Up => src.col_bitboard() & !1 << src.0,
+        Left => src.row_bitboard() & (1 << src.0) - 1,
+        Down => src.col_bitboard() & (1 << src.0) - 1,
     }
 }
 
@@ -70,77 +63,6 @@ fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
         Left => src.0 - hit.0,
         Down => (src.0 - hit.0) / ROW_LEN,
     }) as u32
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct Square(usize);
-
-impl fmt::Display for Square {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}{}",
-            (b'a' + self.col_index() as u8) as char,
-            self.row_index() + 1,
-        )
-    }
-}
-
-impl<T> Index<Square> for [T] {
-    type Output = T;
-
-    fn index(&self, index: Square) -> &Self::Output {
-        unsafe { self.get(index.0).unwrap_unchecked() }
-    }
-}
-
-impl<T> IndexMut<Square> for [T] {
-    fn index_mut(&mut self, index: Square) -> &mut Self::Output {
-        unsafe { self.get_mut(index.0).unwrap_unchecked() }
-    }
-}
-
-impl Square {
-    fn bit(self) -> Bitboard {
-        1 << self.0
-    }
-
-    #[must_use]
-    fn shift(self, amount: usize, dir: Direction) -> Self {
-        sq(match dir {
-            Right => self.0 + amount,
-            Up => self.0 + amount * ROW_LEN,
-            Left => self.0 - amount,
-            Down => self.0 - amount * ROW_LEN,
-        })
-    }
-
-    #[must_use]
-    fn row_index(self) -> usize {
-        self.0 / ROW_LEN
-    }
-
-    #[must_use]
-    fn col_index(self) -> usize {
-        self.0 % ROW_LEN
-    }
-
-    #[must_use]
-    fn row(self) -> Self {
-        sq(self.row_index() * ROW_LEN)
-    }
-
-    #[must_use]
-    fn col(self) -> Self {
-        sq(self.col_index())
-    }
-}
-
-fn sq(sq: usize) -> Square {
-    debug_assert!(sq < ARR_LEN);
-    debug_assert!(sq % ROW_LEN < SIZE);
-
-    Square(sq)
 }
 
 fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
@@ -711,10 +633,10 @@ impl State {
 
         let mut edges = [0; 4];
 
-        edges[BOTTOM] = row(sq(0));
-        edges[TOP] = row(sq((SIZE - 1) * ROW_LEN));
-        edges[LEFT] = col(sq(0));
-        edges[RIGHT] = col(sq(SIZE - 1));
+        edges[BOTTOM] = sq(0).row_bitboard();
+        edges[TOP] = sq((SIZE - 1) * ROW_LEN).row_bitboard();
+        edges[LEFT] = sq(0).col_bitboard();
+        edges[RIGHT] = sq(SIZE - 1).col_bitboard();
 
         let mut curr = edges.map(|e| e & road);
 

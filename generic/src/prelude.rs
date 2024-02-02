@@ -1,4 +1,4 @@
-pub use crate::{lut::*, *};
+pub use crate::{lut::*, square::*, *};
 pub use common::{
     game::{Action as GameAction, *},
     hash::*,
