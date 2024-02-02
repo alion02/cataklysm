@@ -1,6 +1,9 @@
-use crate::{stack::*, util::*};
+use common::{stack::*, util::*};
 
-pub mod size3 {
+pub use inner::*;
+
+#[cfg(feature = "3")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 3;
@@ -11,6 +14,7 @@ pub mod size3 {
     pub type Stack = Stack32;
     pub type ActionBacking = u16;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 9),
         (2, 72),
@@ -22,7 +26,8 @@ pub mod size3 {
     ];
 }
 
-pub mod size4 {
+#[cfg(feature = "4")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 4;
@@ -33,6 +38,7 @@ pub mod size4 {
     pub type Stack = Stack32;
     pub type ActionBacking = u16;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 16),
         (2, 240),
@@ -43,7 +49,8 @@ pub mod size4 {
     ];
 }
 
-pub mod size5 {
+#[cfg(feature = "5")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 5;
@@ -54,6 +61,7 @@ pub mod size5 {
     pub type Stack = Stack64;
     pub type ActionBacking = u16;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 25),
         (2, 600),
@@ -64,7 +72,8 @@ pub mod size5 {
     ];
 }
 
-pub mod size6 {
+#[cfg(feature = "6")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 6;
@@ -75,6 +84,7 @@ pub mod size6 {
     pub type Stack = Stack64;
     pub type ActionBacking = u16;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 36),
         (2, 1260),
@@ -85,7 +95,8 @@ pub mod size6 {
     ];
 }
 
-pub mod size7 {
+#[cfg(feature = "7")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 7;
@@ -96,6 +107,7 @@ pub mod size7 {
     pub type Stack = Stack128;
     pub type ActionBacking = u16;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 49),
         (2, 2352),
@@ -105,7 +117,8 @@ pub mod size7 {
     ];
 }
 
-pub mod size8 {
+#[cfg(feature = "8")]
+pub mod inner {
     use super::*;
 
     pub const SIZE: usize = 8;
@@ -116,6 +129,7 @@ pub mod size8 {
     pub type Stack = Stack128;
     pub type ActionBacking = u32;
 
+    #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
         (1, 64),
         (2, 4032),

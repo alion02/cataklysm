@@ -3,6 +3,8 @@
 	clippy::comparison_chain, // Required for optimal performance at the time of writing
 )]
 
+mod size;
+
 use std::{
     any::Any,
     fmt,
@@ -17,18 +19,7 @@ use std::{
     },
 };
 
-#[cfg(feature = "3")]
-use common::size::size3::*;
-#[cfg(feature = "4")]
-use common::size::size4::*;
-#[cfg(feature = "5")]
-use common::size::size5::*;
-#[cfg(feature = "6")]
-use common::size::size6::*;
-#[cfg(feature = "7")]
-use common::size::size7::*;
-#[cfg(feature = "8")]
-use common::size::size8::*;
+use crate::size::*;
 
 use common::{
     game::{Action as GameAction, *},
