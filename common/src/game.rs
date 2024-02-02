@@ -1,12 +1,9 @@
-use std::{
+use alloc::{boxed::Box, sync::Arc};
+use core::{
     any::Any,
-    error::Error,
     fmt,
     ops::Neg,
-    sync::{
-        atomic::{AtomicBool, Ordering::Relaxed},
-        Arc,
-    },
+    sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 
 use crate::{hash::Hash, pair::Pair};
@@ -152,8 +149,6 @@ impl fmt::Display for NewGameError {
         write!(f, "error instantiating a game")
     }
 }
-
-impl Error for NewGameError {}
 
 pub fn size_of_tps(tps: &str) -> usize {
     tps.as_bytes().iter().filter(|&&c| c == b'/').count() + 1

@@ -1,4 +1,4 @@
-use std::{
+use core::{
     convert::Infallible,
     ops::{ControlFlow, Index, IndexMut},
 };

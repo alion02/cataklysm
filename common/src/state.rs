@@ -1,4 +1,4 @@
-use std::{fmt, mem::transmute, ops::Neg};
+use core::{fmt, mem::transmute, ops::Neg};
 
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]

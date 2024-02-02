@@ -3,9 +3,12 @@
 	clippy::comparison_chain, // Required for optimal performance at the time of writing
 )]
 
+extern crate alloc;
+
 mod size;
 
-use std::{
+use alloc::sync::Arc;
+use core::{
     any::Any,
     fmt,
     mem::transmute,
@@ -13,11 +16,9 @@ use std::{
         ControlFlow::{self, *},
         Index, IndexMut,
     },
-    sync::{
-        atomic::{AtomicBool, Ordering::Relaxed},
-        Arc, Mutex,
-    },
+    sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
+use std::sync::Mutex;
 
 use crate::size::*;
 
@@ -31,7 +32,7 @@ use common::{
 };
 
 use rand::{Rng, SeedableRng};
-use rand_chacha::ChaCha20Rng;
+use rand_chacha::ChaCha20Rng; // NOTE: Requires std with default features
 
 static INIT: Mutex<bool> = Mutex::new(false);
 
@@ -425,7 +426,7 @@ impl State {
             stacks: [Stack::EMPTY; ARR_LEN],
             hashes: Pair::both(WrappingArray(Default::default())),
             killers: WrappingArray(Default::default()),
-            tt: std::iter::repeat(TtBucket::default())
+            tt: core::iter::repeat(TtBucket::default())
                 .take(opt.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
@@ -1038,6 +1039,8 @@ impl Game for State {
     }
 
     fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn GameAction>, ParseActionError> {
+        // TODO: Remove
+        // NOTE: Requires std
         use takparse::{Direction, Move, MoveKind::*, Piece};
 
         let Ok(mv) = ptn.parse::<Move>() else {
@@ -1084,6 +1087,8 @@ impl Game for State {
     }
 
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError> {
+        // TODO: Remove
+        // NOTE: Requires std
         use takparse::{Color, Piece, Tps};
 
         if self.ply != 0 {
@@ -1144,7 +1149,7 @@ impl Game for State {
     }
 
     fn swap_abort_flags(&mut self) {
-        std::mem::swap(&mut self.abort, &mut self.abort_inactive);
+        core::mem::swap(&mut self.abort, &mut self.abort_inactive);
     }
 
     fn stones_left(&mut self) -> Pair<u32> {
