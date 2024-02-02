@@ -3,7 +3,7 @@ use common::{stack::*, util::*};
 pub use inner::*;
 
 #[cfg(feature = "3")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 3;
@@ -27,7 +27,7 @@ pub mod inner {
 }
 
 #[cfg(feature = "4")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 4;
@@ -50,7 +50,7 @@ pub mod inner {
 }
 
 #[cfg(feature = "5")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 5;
@@ -73,7 +73,7 @@ pub mod inner {
 }
 
 #[cfg(feature = "6")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 6;
@@ -96,7 +96,7 @@ pub mod inner {
 }
 
 #[cfg(feature = "7")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 7;
@@ -118,7 +118,7 @@ pub mod inner {
 }
 
 #[cfg(feature = "8")]
-pub mod inner {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 8;
