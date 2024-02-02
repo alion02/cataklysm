@@ -1,9 +1,16 @@
-use common::{stack::*, util::*};
-
-pub use inner::*;
+pub use crate::{lut::*, *};
+pub use common::{
+    game::{Action as GameAction, *},
+    hash::*,
+    pair::*,
+    stack::*,
+    state::{Direction::*, Piece::*, *},
+    util::*,
+};
+pub use size::*;
 
 #[cfg(feature = "3")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 3;
@@ -27,7 +34,7 @@ mod inner {
 }
 
 #[cfg(feature = "4")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 4;
@@ -50,7 +57,7 @@ mod inner {
 }
 
 #[cfg(feature = "5")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 5;
@@ -73,7 +80,7 @@ mod inner {
 }
 
 #[cfg(feature = "6")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 6;
@@ -96,7 +103,7 @@ mod inner {
 }
 
 #[cfg(feature = "7")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 7;
@@ -118,7 +125,7 @@ mod inner {
 }
 
 #[cfg(feature = "8")]
-mod inner {
+mod size {
     use super::*;
 
     pub const SIZE: usize = 8;
