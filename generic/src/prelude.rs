@@ -1,6 +1,6 @@
-pub use crate::{lut::*, square::*, *};
+pub use crate::{action::*, lut::*, square::*, *};
 pub use common::{
-    game::{Action as GameAction, *},
+    game::*,
     hash::*,
     pair::*,
     stack::*,

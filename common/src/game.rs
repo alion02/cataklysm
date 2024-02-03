@@ -42,7 +42,7 @@ pub enum PerftMode {
     Batch,
 }
 
-pub trait Action: fmt::Display + Send {
+pub trait Move: fmt::Display + Send {
     fn as_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
@@ -127,9 +127,9 @@ impl AbortFlag {
 
 pub trait Game: Send {
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
-    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Action>);
-    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Action>, ParseActionError>;
-    fn play(&mut self, action: Box<dyn Action>) -> Result<(), PlayActionError>;
+    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>);
+    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Move>, ParseActionError>;
+    fn play(&mut self, action: Box<dyn Move>) -> Result<(), PlayActionError>;
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
     fn take_nodes(&mut self) -> u64;
     fn curr_hash(&mut self) -> Hash;

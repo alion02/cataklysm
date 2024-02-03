@@ -5,6 +5,7 @@
 
 extern crate alloc;
 
+mod action;
 mod lut;
 mod prelude;
 mod square;
@@ -67,108 +68,6 @@ fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
 
 fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
     Bits::new([bitboard]).map(|s| sq(s as usize))
-}
-
-#[derive(Clone, Copy, PartialEq, Eq)]
-struct Pattern(u32);
-
-impl Pattern {
-    fn execute(self) -> (u32, DropCounts) {
-        let mut dc = DropCounts(self.0 | 1 << HAND);
-        // TODO: Investigate unwrap
-        (HAND - dc.next().unwrap(), dc)
-    }
-}
-
-fn pat(pat: u32) -> Pattern {
-    debug_assert!(pat > 0);
-    debug_assert!(pat < 1 << HAND);
-
-    Pattern(pat)
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Action(ActionBacking);
-
-impl GameAction for Action {
-    fn as_any(self: Box<Self>) -> Box<dyn Any> {
-        self
-    }
-}
-
-impl fmt::Display for Action {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.branch(
-            f,
-            |f| f.write_str("<pass>"),
-            |f, sq, piece| write!(f, "{piece}{sq}"),
-            |f, sq, dir, pat| {
-                let (taken, counts) = pat.execute();
-                if taken == 1 {
-                    write!(f, "{sq}{dir}")
-                } else if counts.count() == 1 {
-                    write!(f, "{taken}{sq}{dir}")
-                } else {
-                    write!(f, "{taken}{sq}{dir}{counts}")
-                }
-            },
-        )
-    }
-}
-
-impl Default for Action {
-    fn default() -> Self {
-        Self::pass()
-    }
-}
-
-impl Action {
-    const TYPE_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
-    const PAT_OFFSET: u32 = Self::TYPE_OFFSET + 2;
-
-    fn pass() -> Self {
-        Self(0)
-    }
-
-    fn place(sq: Square, piece: Piece) -> Self {
-        Self(sq.0 as ActionBacking | (piece as ActionBacking) << Self::TYPE_OFFSET)
-    }
-
-    fn spread(sq: Square, dir: Direction, pat: Pattern) -> Self {
-        Self(
-            sq.0 as ActionBacking
-                | (dir as ActionBacking) << Self::TYPE_OFFSET
-                | (pat.0 as ActionBacking) << Self::PAT_OFFSET,
-        )
-    }
-
-    // `self.0 as u32` is unnecessary iff Action is backed by u32
-    #[allow(clippy::unnecessary_cast)]
-    fn branch<S, R>(
-        self,
-        state: S,
-        pass: impl FnOnce(S) -> R,
-        place: impl FnOnce(S, Square, Piece) -> R,
-        spread: impl FnOnce(S, Square, Direction, Pattern) -> R,
-    ) -> R {
-        if self.0 == 0 {
-            pass(state)
-        } else {
-            let sq = sq(self.0 as usize & (1 << Self::TYPE_OFFSET) - 1);
-            if self.0 < 1 << Self::PAT_OFFSET {
-                place(state, sq, unsafe {
-                    transmute(self.0 as u32 >> Self::TYPE_OFFSET)
-                })
-            } else {
-                spread(
-                    state,
-                    sq,
-                    unsafe { transmute(self.0 as u32 >> Self::TYPE_OFFSET & 3) },
-                    pat(self.0 as u32 >> Self::PAT_OFFSET),
-                )
-            }
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -746,7 +645,7 @@ impl State {
                 let original_beta = beta;
 
                 let mut best_score = -Eval::MAX;
-                let mut best_action = Action::pass();
+                let mut best_action = Action::PASS;
 
                 let (idx, sig) = s.hash_mut().split(s.tt.len());
                 'ret: {
@@ -774,7 +673,7 @@ impl State {
 
                             entry.action
                         } else {
-                            Action::pass()
+                            Action::PASS
                         };
 
                         let mut f = |s: &mut Self, action| {
@@ -887,7 +786,7 @@ impl Game for State {
         }
     }
 
-    fn search(&mut self, depth: u32) -> (Eval, Box<dyn GameAction>) {
+    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>) {
         assert!(depth > 0);
 
         self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
@@ -901,7 +800,7 @@ impl Game for State {
         (entry.score, Box::new(entry.action))
     }
 
-    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn GameAction>, ParseActionError> {
+    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Move>, ParseActionError> {
         // TODO: Remove
         // NOTE: Requires std
         use takparse::{Direction, Move, MoveKind::*, Piece};
@@ -935,7 +834,7 @@ impl Game for State {
         }))
     }
 
-    fn play(&mut self, action: Box<dyn GameAction>) -> Result<(), PlayActionError> {
+    fn play(&mut self, action: Box<dyn Move>) -> Result<(), PlayActionError> {
         let action = action.as_any();
         let Some(&action) = action.downcast_ref() else {
             panic!("action-state size mismatch");
