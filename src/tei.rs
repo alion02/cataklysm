@@ -182,10 +182,10 @@ pub async fn run() {
 
                         state.abort().await;
                         let game = state.game.as_mut().expect("can't switch position");
-                        for m in cmd {
-                            let action = game.parse_action(m).unwrap();
+                        for mv in cmd {
+                            let action = game.parser()(mv).unwrap();
                             game.play(action).unwrap();
-                            state.history.push(m.to_string());
+                            state.history.push(mv.to_string());
                         }
                     }
                     "go" => {

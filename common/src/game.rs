@@ -105,10 +105,10 @@ impl Eval {
 }
 
 #[derive(Debug)]
-pub struct ParseActionError;
+pub struct ParseMoveError;
 
 #[derive(Debug)]
-pub struct PlayActionError;
+pub struct PlayMoveError;
 
 #[derive(Debug)]
 pub struct SetPositionError;
@@ -126,19 +126,20 @@ impl AbortFlag {
 }
 
 pub trait Game: Send {
-    fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>);
-    fn parse_action(&mut self, ptn: &str) -> Result<Box<dyn Move>, ParseActionError>;
-    fn play(&mut self, action: Box<dyn Move>) -> Result<(), PlayActionError>;
+    fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
+    fn parser(&mut self) -> fn(&str) -> Result<Box<dyn Move>, ParseMoveError>;
+    fn play(&mut self, mv: Box<dyn Move>) -> Result<(), PlayMoveError>;
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
     fn take_nodes(&mut self) -> u64;
     fn curr_hash(&mut self) -> Hash;
     fn abort_flag(&mut self) -> AbortFlag;
     fn clear_abort_flag(&mut self) -> bool;
     fn swap_abort_flags(&mut self);
-    fn stones_left(&mut self) -> Pair<u32>;
-    fn caps_left(&mut self) -> Pair<u32>;
-    fn active_color(&mut self) -> bool;
+    fn stones_left(&self) -> Pair<u32>;
+    fn caps_left(&self) -> Pair<u32>;
+    fn active_color(&self) -> bool;
+    fn is_opening(&self) -> bool;
 }
 
 #[derive(Debug)]

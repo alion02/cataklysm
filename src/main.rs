@@ -111,7 +111,7 @@ fn hashtest(args: Args) {
     loop {
         println!("{:?}", game.curr_hash());
 
-        let Ok(action) = game.parse_action(&stdin.next().unwrap()) else {
+        let Ok(action) = game.parser()(&stdin.next().unwrap()) else {
             println!("could not parse action");
             continue;
         };
