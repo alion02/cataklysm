@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Square(pub usize);

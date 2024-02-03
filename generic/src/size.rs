@@ -1,16 +1,9 @@
-pub use crate::{action::*, lut::*, square::*, tt::*, *};
-pub use common::{
-    game::*,
-    hash::*,
-    pair::*,
-    stack::*,
-    state::{Direction::*, Piece::*, *},
-    util::*,
-};
-pub use size::*;
+use crate::*;
+
+pub use inner::*;
 
 #[cfg(feature = "3")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 3;
@@ -34,7 +27,7 @@ mod size {
 }
 
 #[cfg(feature = "4")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 4;
@@ -57,7 +50,7 @@ mod size {
 }
 
 #[cfg(feature = "5")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 5;
@@ -80,7 +73,7 @@ mod size {
 }
 
 #[cfg(feature = "6")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 6;
@@ -103,7 +96,7 @@ mod size {
 }
 
 #[cfg(feature = "7")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 7;
@@ -125,7 +118,7 @@ mod size {
 }
 
 #[cfg(feature = "8")]
-mod size {
+mod inner {
     use super::*;
 
     pub const SIZE: usize = 8;
