@@ -9,6 +9,7 @@ mod action;
 mod lut;
 mod prelude;
 mod square;
+mod tt;
 
 use crate::prelude::*;
 
@@ -68,66 +69,6 @@ fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
 
 fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
     Bits::new([bitboard]).map(|s| sq(s as usize))
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct Packed(u8);
-
-impl Packed {
-    fn is_upper(self) -> bool {
-        self.0 & 0x40 == 0
-    }
-
-    fn is_lower(self) -> bool {
-        self.0 & 0x80 == 0
-    }
-
-    fn generation(self) -> u32 {
-        self.0 as u32 & 0x3F
-    }
-
-    fn set_upper(&mut self) {
-        self.0 |= 0x80;
-    }
-
-    fn set_lower(&mut self) {
-        self.0 |= 0x40;
-    }
-
-    fn set_generation(&mut self, generation: u32) {
-        self.0 = self.0 & !0x3F | generation as u8 & 0x3F;
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-struct TtEntry {
-    sig: u64,
-    score: Eval,
-    action: Action,
-    depth: u8,
-    packed: Packed,
-}
-
-// TODO: Cleanup
-fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> i32 {
-    depth as i32 - (curr_gen - entry_gen & 0x3F) as i32
-}
-
-#[derive(Debug, Clone, Copy, Default)]
-#[repr(align(32))]
-struct TtBucket([TtEntry; 2]);
-
-impl TtBucket {
-    fn entry(&mut self, sig: u64) -> Option<&mut TtEntry> {
-        self.0.iter_mut().find(|e| e.sig == sig)
-    }
-
-    fn worst_entry(&mut self, curr_gen: u32) -> &mut TtEntry {
-        self.0
-            .iter_mut()
-            .min_by_key(|e| rate_entry(e.depth, e.packed.generation(), curr_gen))
-            .unwrap()
-    }
 }
 
 #[repr(C)]
