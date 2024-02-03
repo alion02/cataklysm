@@ -4,6 +4,7 @@
 )]
 
 mod action;
+mod influence;
 mod lut;
 mod size;
 mod square;
@@ -14,7 +15,7 @@ extern crate alloc;
 
 pub use state::State;
 
-use crate::{action::*, lut::*, size::*, square::*, tt::*};
+use crate::{action::*, influence::*, lut::*, size::*, square::*, tt::*};
 
 use common::{
     game::*,

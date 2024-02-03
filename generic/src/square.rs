@@ -4,7 +4,7 @@ use crate::*;
 pub struct Square(pub usize);
 
 #[must_use]
-pub fn sq(sq: usize) -> Square {
+pub const fn sq(sq: usize) -> Square {
     debug_assert!(sq < ARR_LEN);
     debug_assert!(sq % ROW_LEN < SIZE);
 
@@ -28,32 +28,32 @@ impl Square {
     }
 
     #[must_use]
-    pub fn row_bitboard(self) -> Bitboard {
+    pub const fn row_bitboard(self) -> Bitboard {
         ROW << self.align_left().0
     }
 
     #[must_use]
-    pub fn col_bitboard(self) -> Bitboard {
+    pub const fn col_bitboard(self) -> Bitboard {
         COL << self.align_bottom().0
     }
 
     #[must_use]
-    pub fn row(self) -> usize {
+    pub const fn row(self) -> usize {
         self.0 / ROW_LEN
     }
 
     #[must_use]
-    pub fn col(self) -> usize {
+    pub const fn col(self) -> usize {
         self.0 % ROW_LEN
     }
 
     #[must_use]
-    pub fn align_left(self) -> Self {
+    pub const fn align_left(self) -> Self {
         sq(self.row() * ROW_LEN)
     }
 
     #[must_use]
-    pub fn align_bottom(self) -> Self {
+    pub const fn align_bottom(self) -> Self {
         sq(self.col())
     }
 }

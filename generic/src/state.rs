@@ -22,6 +22,9 @@ pub struct State {
     abort_inactive: Arc<AtomicBool>,
 
     stacks: [Stack; ARR_LEN],
+
+    influence: Pair<Influence>,
+
     hashes: WrappingArray<Hash, HIST_LEN>,
 
     killers: WrappingArray<Action, KILLERS_LEN>,
@@ -53,6 +56,7 @@ impl State {
             abort: Arc::new(AtomicBool::new(false)),
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
+            influence: Pair::default(),
             hashes: WrappingArray([Hash::ZERO; HIST_LEN]),
             killers: WrappingArray(Default::default()),
             tt: core::iter::repeat(TtBucket::default())
@@ -568,42 +572,7 @@ impl State {
     }
 
     fn has_road(&self, color: bool) -> bool {
-        assert_ne!(PADDING, 0);
-
-        let road = self.road[color];
-
-        const BOTTOM: usize = 0;
-        const TOP: usize = 1;
-        const LEFT: usize = 2;
-        const RIGHT: usize = 3;
-
-        let mut edges = [0; 4];
-
-        edges[BOTTOM] = sq(0).row_bitboard();
-        edges[TOP] = sq((SIZE - 1) * ROW_LEN).row_bitboard();
-        edges[LEFT] = sq(0).col_bitboard();
-        edges[RIGHT] = sq(SIZE - 1).col_bitboard();
-
-        let mut curr = edges.map(|e| e & road);
-
-        loop {
-            // Fill all nearby road tiles
-            let next = curr.map(|c| (c | c << 1 | c >> 1 | c << ROW_LEN | c >> ROW_LEN) & road);
-
-            if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
-                // If either pair of edges met, there is a road
-                return true;
-            }
-
-            if ((next[BOTTOM] == curr[BOTTOM]) | (next[TOP] == curr[TOP]))
-                & ((next[LEFT] == curr[LEFT]) | (next[RIGHT] == curr[RIGHT]))
-            {
-                // If at least one edge stagnated in both directions, there can be no road
-                return false;
-            }
-
-            curr = next;
-        }
+        Influence::new(self.road[color], true).1
     }
 
     fn count_flats(&self, color: bool) -> u32 {
