@@ -1,5 +1,8 @@
 use crate::*;
 
+const HIST_LEN: usize = 64;
+const KILLERS_LEN: usize = 32;
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct State {
@@ -19,9 +22,9 @@ pub struct State {
     abort_inactive: Arc<AtomicBool>,
 
     stacks: [Stack; ARR_LEN],
-    hashes: Pair<WrappingArray<Hash, HIST_LEN>>,
+    hashes: WrappingArray<Hash, HIST_LEN>,
 
-    killers: WrappingArray<Action, 32>,
+    killers: WrappingArray<Action, KILLERS_LEN>,
 
     tt: Box<[TtBucket]>,
 }
@@ -50,7 +53,7 @@ impl State {
             abort: Arc::new(AtomicBool::new(false)),
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
-            hashes: Pair::both(WrappingArray(Default::default())),
+            hashes: WrappingArray([Hash::ZERO; HIST_LEN]),
             killers: WrappingArray(Default::default()),
             tt: core::iter::repeat(TtBucket::default())
                 .take(opt.tt_size)
@@ -608,8 +611,7 @@ impl State {
     }
 
     fn hash_mut(&mut self) -> &mut Hash {
-        let color = self.active_color();
-        &mut self.hashes[color][self.ply / 2]
+        &mut self.hashes[self.ply]
     }
 }
 

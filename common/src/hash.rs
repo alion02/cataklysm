@@ -5,9 +5,7 @@ use rand::{
     prelude::Rng,
 };
 
-pub const HIST_LEN: usize = 32;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hash(u64);
 
 impl Hash {
