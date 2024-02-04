@@ -23,7 +23,7 @@ impl Influence {
 
     pub fn new(road: Bitboard, fast: bool) -> (Self, bool) {
         fn expand(edges: &mut [Bitboard; 4], and_with: Bitboard) -> [Bitboard; 4] {
-            edges.map(|c| (c | c << 1 | c >> 1 | c << ROW_LEN | c >> ROW_LEN) & and_with)
+            edges.map(|c| c | c.spread() & and_with)
         }
 
         assert_ne!(PADDING, 0);
