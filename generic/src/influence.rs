@@ -26,8 +26,6 @@ impl Influence {
             edges.map(|c| c | c.spread() & and_with)
         }
 
-        assert_ne!(PADDING, 0);
-
         let mut influence = Self::EMPTY;
         let edges = &mut influence.0;
 

@@ -122,12 +122,12 @@ mod inner {
     use super::*;
 
     pub const SIZE: usize = 8;
-    pub const ROW_LEN: usize = 9; // TODO
+    pub const ROW_LEN: usize = 8;
 
-    pub type Bitboard = u128;
-    pub type Bits = Bits128<1>;
+    pub type Bitboard = u64;
+    pub type Bits = Bits64<1>;
     pub type Stack = Stack128;
-    pub type ActionBacking = u32;
+    pub type ActionBacking = u16;
 
     #[cfg(test)]
     pub const PERFT: &[(u32, u64)] = &[
