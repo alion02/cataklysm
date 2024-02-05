@@ -10,7 +10,7 @@ const RIGHT: usize = 3;
 pub struct Influence([Bitboard; 4]);
 
 impl Influence {
-    pub const EMPTY: Self = {
+    pub const EDGES: Self = {
         let mut edges = [0; 4];
 
         edges[BOTTOM] = sq(0).row_bitboard();
@@ -22,18 +22,13 @@ impl Influence {
     };
 
     pub fn new(road: Bitboard, fast: bool) -> (Self, bool) {
-        fn expand(edges: &mut [Bitboard; 4], and_with: Bitboard) -> [Bitboard; 4] {
-            edges.map(|c| c | c.spread() & and_with)
-        }
+        let mut influence = Self::EDGES;
 
-        let mut influence = Self::EMPTY;
-        let edges = &mut influence.0;
-
-        edges.iter_mut().for_each(|e| *e &= road);
+        influence &= road;
 
         let has_road = loop {
             // Fill all nearby road tiles
-            let next = expand(edges, road);
+            let next = influence | influence.spread() & road;
 
             if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
                 // If either pair of edges met, there is a road
@@ -42,34 +37,148 @@ impl Influence {
 
             if fast {
                 // Partial computation
-                if ((next[BOTTOM] == edges[BOTTOM]) | (next[TOP] == edges[TOP]))
-                    & ((next[LEFT] == edges[LEFT]) | (next[RIGHT] == edges[RIGHT]))
+                if ((next[BOTTOM] == influence[BOTTOM]) | (next[TOP] == influence[TOP]))
+                    & ((next[LEFT] == influence[LEFT]) | (next[RIGHT] == influence[RIGHT]))
                 {
                     // If at least one edge stagnated in both directions, there can be no road
                     break false;
                 }
             } else {
                 // Full computation
-                if (0..4).all(|i| edges[i] == next[i]) {
+                if (0..4).all(|i| influence[i] == next[i]) {
                     // If all edges stagnated, we're done expanding
                     break false;
                 }
             }
 
-            *edges = next;
+            influence = next;
         };
 
         // Expand all edges one more time
         // TODO: Consider removing the final AND with BOARD
         // FIXME: edges |= Self::EMPTY
-        *edges = expand(edges, BOARD);
+        influence |= Self::EDGES | influence.spread() & BOARD;
 
         (influence, has_road)
+    }
+
+    pub fn spread(self) -> Self {
+        Self(self.0.map(Bitboard::spread))
+    }
+}
+
+impl BitAnd<Bitboard> for Influence {
+    type Output = Influence;
+
+    fn bitand(self, rhs: Bitboard) -> Self::Output {
+        Self(self.0.map(|lhs| lhs & rhs))
+    }
+}
+
+impl BitAndAssign<Bitboard> for Influence {
+    fn bitand_assign(&mut self, rhs: Bitboard) {
+        for lhs in &mut self.0 {
+            *lhs &= rhs;
+        }
+    }
+}
+
+impl BitOr<Bitboard> for Influence {
+    type Output = Influence;
+
+    fn bitor(self, rhs: Bitboard) -> Self::Output {
+        Self(self.0.map(|lhs| lhs | rhs))
+    }
+}
+
+impl BitOrAssign<Bitboard> for Influence {
+    fn bitor_assign(&mut self, rhs: Bitboard) {
+        for lhs in &mut self.0 {
+            *lhs |= rhs;
+        }
+    }
+}
+
+impl BitXor<Bitboard> for Influence {
+    type Output = Influence;
+
+    fn bitxor(self, rhs: Bitboard) -> Self::Output {
+        Self(self.0.map(|lhs| lhs ^ rhs))
+    }
+}
+
+impl BitXorAssign<Bitboard> for Influence {
+    fn bitxor_assign(&mut self, rhs: Bitboard) {
+        for lhs in &mut self.0 {
+            *lhs ^= rhs;
+        }
+    }
+}
+
+impl BitAnd for Influence {
+    type Output = Influence;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Self(make_arr(|i| self[i] & rhs[i]))
+    }
+}
+
+impl BitAndAssign for Influence {
+    fn bitand_assign(&mut self, rhs: Self) {
+        for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
+            *lhs &= rhs;
+        }
+    }
+}
+
+impl BitOr for Influence {
+    type Output = Influence;
+
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(make_arr(|i| self[i] | rhs[i]))
+    }
+}
+
+impl BitOrAssign for Influence {
+    fn bitor_assign(&mut self, rhs: Self) {
+        for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
+            *lhs |= rhs;
+        }
+    }
+}
+
+impl BitXor for Influence {
+    type Output = Influence;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(make_arr(|i| self[i] ^ rhs[i]))
+    }
+}
+
+impl BitXorAssign for Influence {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
+            *lhs ^= rhs;
+        }
+    }
+}
+
+impl Index<usize> for Influence {
+    type Output = Bitboard;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
+    }
+}
+
+impl IndexMut<usize> for Influence {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.0[index]
     }
 }
 
 impl Default for Influence {
     fn default() -> Self {
-        Self::EMPTY
+        Self::EDGES
     }
 }

@@ -30,9 +30,11 @@ use common::{
 use alloc::sync::Arc;
 use core::{
     any::Any,
+    array::from_fn as make_arr,
     fmt,
     mem::transmute,
     ops::{
+        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
         ControlFlow::{self, *},
         Index, IndexMut,
     },
