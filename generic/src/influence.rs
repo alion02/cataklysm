@@ -22,9 +22,7 @@ impl Influence {
     };
 
     pub fn new(road: Bitboard, fast: bool) -> (Self, bool) {
-        let mut influence = Self::EDGES;
-
-        influence &= road;
+        let mut influence = Self::EDGES & road;
 
         let has_road = loop {
             // Fill all nearby road tiles
@@ -56,7 +54,6 @@ impl Influence {
 
         // Expand all edges one more time
         // TODO: Consider removing the final AND with BOARD
-        // FIXME: edges |= Self::EMPTY
         influence |= Self::EDGES | influence.spread() & BOARD;
 
         (influence, has_road)
