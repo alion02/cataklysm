@@ -21,11 +21,13 @@ impl Influence {
         Self(edges)
     };
 
+    #[inline(always)]
     pub fn recompute(&mut self, road: Bitboard, fast: bool) -> bool {
         *self = Self::EDGES;
         self.compute(road, fast)
     }
 
+    #[inline(always)]
     pub fn compute(&mut self, road: Bitboard, fast: bool) -> bool {
         *self &= road;
 
