@@ -28,8 +28,7 @@ impl Influence {
             // Fill all nearby road tiles
             let next = *self | self.spread() & road;
 
-            // TODO: Use intersections_of_opposites?
-            if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
+            if next.intersections_of_opposites() != 0 {
                 // If either pair of edges met, there is a road
                 break true;
             }
@@ -44,7 +43,7 @@ impl Influence {
                 }
             } else {
                 // Full computation
-                // TODO: Use ==?
+                // NOTE: Using == causes a significant performance regression
                 if (0..4).all(|i| self[i] == next[i]) {
                     // If all edges stagnated, we're done expanding
                     break false;
