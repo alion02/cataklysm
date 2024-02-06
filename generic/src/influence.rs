@@ -67,6 +67,11 @@ impl Influence {
         has_road
     }
 
+    pub fn extend(&mut self, new_road: Bitboard) {
+        let point = new_road.spread() & BOARD;
+        *self |= Self(self.0.map(|b| if b & new_road != 0 { point } else { 0 }));
+    }
+
     pub fn spread(self) -> Self {
         Self(self.0.map(Bitboard::spread))
     }
