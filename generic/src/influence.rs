@@ -62,6 +62,10 @@ impl Influence {
     pub fn spread(self) -> Self {
         Self(self.0.map(Bitboard::spread))
     }
+
+    pub fn intersections_of_opposites(self) -> Bitboard {
+        self[BOTTOM] & self[TOP] | self[LEFT] & self[RIGHT]
+    }
 }
 
 impl BitAnd<Bitboard> for Influence {

@@ -572,7 +572,7 @@ impl State {
     }
 
     fn has_road(&self, color: bool) -> bool {
-        Influence::new(self.road[color], true).1
+        self.influence[color].intersections_of_opposites() & self.road[color] != 0
     }
 
     fn count_flats(&self, color: bool) -> u32 {
