@@ -57,6 +57,15 @@ impl<T> Pair<T> {
             BLACK => (&mut self.black, &mut self.white),
         }
     }
+
+    pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> Pair<U> {
+        Pair::new(f(self.white), f(self.black))
+    }
+
+    pub fn map_mut<U>(&mut self, mut f: impl FnMut(&mut T)) {
+        f(&mut self.white);
+        f(&mut self.black);
+    }
 }
 
 impl<T: Copy> Pair<T> {
