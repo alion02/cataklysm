@@ -22,7 +22,12 @@ impl Influence {
     };
 
     pub fn recompute(&mut self, road: Bitboard, fast: bool) -> bool {
-        *self = Self::EDGES & road;
+        *self = Self::EDGES;
+        self.compute(road, fast)
+    }
+
+    pub fn compute(&mut self, road: Bitboard, fast: bool) -> bool {
+        *self &= road;
 
         let has_road = loop {
             // Fill all nearby road tiles

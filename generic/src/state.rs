@@ -324,7 +324,7 @@ impl State {
 
                 if piece.is_road() {
                     s.road[color] ^= bit;
-                    s.influence[color].recompute(s.road[color], false);
+                    s.influence[color].compute(s.road[color], false);
                 }
 
                 if piece.is_block() {
