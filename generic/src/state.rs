@@ -300,12 +300,6 @@ impl State {
     // Performance experiment: remove undo option (always force undo).
     // Results: mixed.
     fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
-        let f = move |s: &mut State| {
-            s.influence.white.recompute(s.road.white, false);
-            s.influence.black.recompute(s.road.black, false);
-            f(s)
-        };
-
         let mut s = self;
         let color = s.active_color() ^ s.is_opening();
 
@@ -315,7 +309,6 @@ impl State {
 
         s.ply += 1;
 
-        let influence = s.influence;
         let last_reversible = s.last_reversible;
 
         let r = action.branch(
@@ -323,6 +316,8 @@ impl State {
             |(s, _, f)| f(s),
             |(s, mut hash, f), sq, piece| {
                 let bit = sq.bit();
+
+                let influence = s.influence[color];
 
                 // Placement is not reversible
                 s.last_reversible = s.ply;
@@ -351,10 +346,14 @@ impl State {
 
                 hash ^= unsafe { HASH_STACK[sq][0][s.stacks[sq].raw() as usize] };
 
+                s.influence[color].recompute(s.road[color], false);
+
                 *s.hash_mut() = hash;
                 let r = f(s);
 
                 if undo {
+                    s.influence[color] = influence;
+
                     s.stacks[sq] = Stack::EMPTY;
 
                     if piece.is_stone() {
@@ -380,6 +379,7 @@ impl State {
                 let road = s.road;
                 let block = s.block;
                 let stacks = s.stacks;
+                let influence = s.influence;
 
                 let is_road = road[color] & bit != 0;
                 let is_block = block[color] & bit != 0;
@@ -458,10 +458,14 @@ impl State {
                     s.block[color] |= bit;
                 }
 
+                s.influence.white.recompute(s.road.white, false);
+                s.influence.black.recompute(s.road.black, false);
+
                 *s.hash_mut() = hash;
                 let r = f(s);
 
                 if undo {
+                    s.influence = influence;
                     s.stacks = stacks;
                     s.block = block;
                     s.road = road;
@@ -473,7 +477,6 @@ impl State {
 
         if undo {
             s.last_reversible = last_reversible;
-            s.influence = influence;
             s.ply -= 1;
         }
 
