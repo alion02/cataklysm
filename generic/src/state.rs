@@ -56,7 +56,7 @@ impl State {
             abort: Arc::new(AtomicBool::new(false)),
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
-            influence: Pair::default(),
+            influence: Pair::both(Influence::EDGES),
             hashes: WrappingArray([Hash::ZERO; HIST_LEN]),
             killers: WrappingArray(Default::default()),
             tt: core::iter::repeat(TtBucket::default())

@@ -28,6 +28,7 @@ impl Influence {
             // Fill all nearby road tiles
             let next = influence | influence.spread() & road;
 
+            // TODO: Use intersections_of_opposites?
             if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
                 // If either pair of edges met, there is a road
                 break true;
@@ -43,6 +44,7 @@ impl Influence {
                 }
             } else {
                 // Full computation
+                // TODO: Use ==?
                 if (0..4).all(|i| influence[i] == next[i]) {
                     // If all edges stagnated, we're done expanding
                     break false;
@@ -175,11 +177,5 @@ impl Index<usize> for Influence {
 impl IndexMut<usize> for Influence {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
-    }
-}
-
-impl Default for Influence {
-    fn default() -> Self {
-        Self::EDGES
     }
 }
