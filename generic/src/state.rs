@@ -324,6 +324,7 @@ impl State {
 
                 if piece.is_road() {
                     s.road[color] ^= bit;
+                    s.influence[color].recompute(s.road[color], false);
                 }
 
                 if piece.is_block() {
@@ -345,8 +346,6 @@ impl State {
                 s.stacks[sq] = Stack::one_tall(color);
 
                 hash ^= unsafe { HASH_STACK[sq][0][s.stacks[sq].raw() as usize] };
-
-                s.influence[color].recompute(s.road[color], false);
 
                 *s.hash_mut() = hash;
                 let r = f(s);
