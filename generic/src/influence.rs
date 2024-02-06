@@ -21,12 +21,12 @@ impl Influence {
         Self(edges)
     };
 
-    pub fn new(road: Bitboard, fast: bool) -> (Self, bool) {
-        let mut influence = Self::EDGES & road;
+    pub fn recompute(&mut self, road: Bitboard, fast: bool) -> bool {
+        *self = Self::EDGES & road;
 
         let has_road = loop {
             // Fill all nearby road tiles
-            let next = influence | influence.spread() & road;
+            let next = *self | self.spread() & road;
 
             // TODO: Use intersections_of_opposites?
             if (next[BOTTOM] & next[TOP] != 0) | (next[LEFT] & next[RIGHT] != 0) {
@@ -36,8 +36,8 @@ impl Influence {
 
             if fast {
                 // Partial computation
-                if ((next[BOTTOM] == influence[BOTTOM]) | (next[TOP] == influence[TOP]))
-                    & ((next[LEFT] == influence[LEFT]) | (next[RIGHT] == influence[RIGHT]))
+                if ((next[BOTTOM] == self[BOTTOM]) | (next[TOP] == self[TOP]))
+                    & ((next[LEFT] == self[LEFT]) | (next[RIGHT] == self[RIGHT]))
                 {
                     // If at least one edge stagnated in both directions, there can be no road
                     break false;
@@ -45,20 +45,20 @@ impl Influence {
             } else {
                 // Full computation
                 // TODO: Use ==?
-                if (0..4).all(|i| influence[i] == next[i]) {
+                if (0..4).all(|i| self[i] == next[i]) {
                     // If all edges stagnated, we're done expanding
                     break false;
                 }
             }
 
-            influence = next;
+            *self = next;
         };
 
         // Expand all edges one more time
         // TODO: Consider removing the final AND with BOARD
-        influence |= Self::EDGES | influence.spread() & BOARD;
+        *self |= Self::EDGES | self.spread() & BOARD;
 
-        (influence, has_road)
+        has_road
     }
 
     pub fn spread(self) -> Self {

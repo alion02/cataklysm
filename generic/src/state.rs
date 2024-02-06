@@ -300,6 +300,12 @@ impl State {
     // Performance experiment: remove undo option (always force undo).
     // Results: mixed.
     fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
+        let f = move |s: &mut State| {
+            s.influence.white.recompute(s.road.white, false);
+            s.influence.black.recompute(s.road.black, false);
+            f(s)
+        };
+
         let mut s = self;
         let color = s.active_color() ^ s.is_opening();
 
@@ -309,6 +315,7 @@ impl State {
 
         s.ply += 1;
 
+        let influence = s.influence;
         let last_reversible = s.last_reversible;
 
         let r = action.branch(
@@ -466,6 +473,7 @@ impl State {
 
         if undo {
             s.last_reversible = last_reversible;
+            s.influence = influence;
             s.ply -= 1;
         }
 
@@ -715,6 +723,9 @@ impl Game for State {
                 }
             }
         }
+
+        self.influence.white.recompute(self.road.white, false);
+        self.influence.black.recompute(self.road.black, false);
 
         self.ply = tps.ply() as u32;
 
