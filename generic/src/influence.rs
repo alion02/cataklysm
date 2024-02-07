@@ -1,9 +1,9 @@
 use crate::*;
 
-const BOTTOM: usize = 0;
-const TOP: usize = 1;
-const LEFT: usize = 2;
-const RIGHT: usize = 3;
+pub const BOTTOM: usize = 0;
+pub const TOP: usize = 1;
+pub const LEFT: usize = 2;
+pub const RIGHT: usize = 3;
 
 #[repr(align(32))]
 #[derive(Debug, Clone, Copy)]

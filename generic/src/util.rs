@@ -49,3 +49,43 @@ pub fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
 pub fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
     Bits::new([bitboard]).map(|s| sq(s as usize))
 }
+
+pub fn flood_distance(
+    start: Bitboard,
+    goal: Bitboard,
+    traversible: Bitboard,
+    fast: Bitboard,
+) -> u32 {
+    let mut c = start & traversible;
+    let mut cost = 0;
+    loop {
+        // Spread to traversible neighbors
+        let mut nc = c.spread() & traversible | c;
+        cost += 1;
+
+        if nc & goal != 0 {
+            return cost;
+        }
+
+        if c == nc {
+            // If no more traversible neighbors, no road possible
+            // TODO: Something better
+            return SIZE as u32;
+        }
+
+        loop {
+            let new_fast = nc & !c & fast;
+            c = nc;
+
+            if new_fast == 0 {
+                break;
+            }
+
+            nc |= new_fast.spread() & traversible;
+
+            if nc & goal != 0 {
+                return cost;
+            }
+        }
+    }
+}

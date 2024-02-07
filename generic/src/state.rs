@@ -192,13 +192,21 @@ impl State {
 
     fn eval(&self) -> Eval {
         let eval_half = |color| {
+            let inf = self.influence[color];
+            let road = self.road[color];
+            let traversible = BOARD ^ (self.road[!color] | self.block.white | self.block.black);
+
+            let total_dist = flood_distance(inf[BOTTOM], inf[TOP], traversible, road)
+                + flood_distance(inf[LEFT], inf[RIGHT], traversible, road);
+
             self.stones_left[color] as i32 * -20
                 + self.caps_left[color] as i32 * -30
                 + self.count_flats(color) as i32 * 14
+                + total_dist as i32 * -6
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + 17)
+        Eval::new(eval_half(color) - eval_half(!color) + 26)
     }
 
     // Performance experiment: swap C and &mut Self.
