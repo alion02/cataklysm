@@ -457,8 +457,15 @@ impl State {
                     s.block[color] |= bit;
                 }
 
-                s.influence.white.clear_and_flood(s.road.white, false);
-                s.influence.black.clear_and_flood(s.road.black, false);
+                for color in [WHITE, BLACK] {
+                    if road[color] != s.road[color] {
+                        if road[color] & !s.road[color] != 0 {
+                            s.influence[color].clear();
+                        }
+
+                        s.influence[color].flood(s.road[color], false);
+                    }
+                }
 
                 *s.hash_mut() = hash;
                 let r = f(s);
