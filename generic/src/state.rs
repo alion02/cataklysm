@@ -194,7 +194,8 @@ impl State {
         let eval_half = |color| {
             let inf = self.influence[color];
             let road = self.road[color];
-            let traversible = BOARD ^ (self.road[!color] | self.block.white | self.block.black);
+            let traversible =
+                road | BOARD ^ (self.road[!color] | self.block.white | self.block.black);
 
             let total_dist = flood_distance(inf[BOTTOM], inf[TOP], traversible, road)
                 + flood_distance(inf[LEFT], inf[RIGHT], traversible, road);
