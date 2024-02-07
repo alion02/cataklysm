@@ -324,7 +324,7 @@ impl State {
 
                 if piece.is_road() {
                     s.road[color] ^= bit;
-                    s.influence[color].compute(s.road[color], false);
+                    s.influence[color].flood(s.road[color], false);
                 }
 
                 if piece.is_block() {
@@ -457,8 +457,8 @@ impl State {
                     s.block[color] |= bit;
                 }
 
-                s.influence.white.recompute(s.road.white, false);
-                s.influence.black.recompute(s.road.black, false);
+                s.influence.white.clear_and_flood(s.road.white, false);
+                s.influence.black.clear_and_flood(s.road.black, false);
 
                 *s.hash_mut() = hash;
                 let r = f(s);
@@ -726,8 +726,8 @@ impl Game for State {
             }
         }
 
-        self.influence.white.recompute(self.road.white, false);
-        self.influence.black.recompute(self.road.black, false);
+        self.influence.white.clear_and_flood(self.road.white, false);
+        self.influence.black.clear_and_flood(self.road.black, false);
 
         self.ply = tps.ply() as u32;
 

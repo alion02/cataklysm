@@ -22,13 +22,18 @@ impl Influence {
     };
 
     #[inline(always)]
-    pub fn recompute(&mut self, road: Bitboard, fast: bool) -> bool {
-        *self = Self::EDGES;
-        self.compute(road, fast)
+    pub fn clear_and_flood(&mut self, road: Bitboard, fast: bool) -> bool {
+        self.clear();
+        self.flood(road, fast)
     }
 
     #[inline(always)]
-    pub fn compute(&mut self, road: Bitboard, fast: bool) -> bool {
+    pub fn clear(&mut self) {
+        *self = Self::EDGES;
+    }
+
+    #[inline(always)]
+    pub fn flood(&mut self, road: Bitboard, fast: bool) -> bool {
         *self &= road;
 
         let has_road = loop {
@@ -50,8 +55,7 @@ impl Influence {
                 }
             } else {
                 // Full computation
-                // NOTE: Using == causes a significant performance regression
-                if (0..4).all(|i| self[i] == next[i]) {
+                if &next == self {
                     // If all edges stagnated, we're done expanding
                     break false;
                 }
@@ -190,3 +194,11 @@ impl IndexMut<usize> for Influence {
         &mut self.0[index]
     }
 }
+
+impl PartialEq for Influence {
+    fn eq(&self, other: &Self) -> bool {
+        (0..4).all(|i| self[i] == other[i])
+    }
+}
+
+impl Eq for Influence {}
