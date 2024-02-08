@@ -56,12 +56,16 @@ pub fn flood_distance(
     traversable: Bitboard,
     fast: Bitboard,
 ) -> u32 {
+    const DIST_CAP: u32 = SIZE as u32;
+
     let mut c = start & traversable;
-    let mut cost = 0;
-    loop {
+    if c & goal != 0 {
+        return 0;
+    }
+
+    for cost in 1..DIST_CAP {
         // Spread to traversible neighbors
         let mut nc = c.spread() & traversable | c;
-        cost += 1;
 
         if nc & goal != 0 {
             return cost;
@@ -69,8 +73,7 @@ pub fn flood_distance(
 
         if c == nc {
             // If no more traversible neighbors, no road possible
-            // TODO: Something better
-            return SIZE as u32;
+            break;
         }
 
         loop {
@@ -88,4 +91,6 @@ pub fn flood_distance(
             }
         }
     }
+
+    DIST_CAP
 }
