@@ -53,14 +53,14 @@ pub fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
 pub fn flood_distance(
     start: Bitboard,
     goal: Bitboard,
-    traversible: Bitboard,
+    traversable: Bitboard,
     fast: Bitboard,
 ) -> u32 {
-    let mut c = start & traversible;
+    let mut c = start & traversable;
     let mut cost = 0;
     loop {
         // Spread to traversible neighbors
-        let mut nc = c.spread() & traversible | c;
+        let mut nc = c.spread() & traversable | c;
         cost += 1;
 
         if nc & goal != 0 {
@@ -81,7 +81,7 @@ pub fn flood_distance(
                 break;
             }
 
-            nc |= new_fast.spread() & traversible;
+            nc |= new_fast.spread() & traversable;
 
             if nc & goal != 0 {
                 return cost;

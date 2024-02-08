@@ -193,12 +193,46 @@ impl State {
     fn eval(&self) -> Eval {
         let eval_half = |color| {
             let inf = self.influence[color];
-            let road = self.road[color];
-            let traversible =
-                road | BOARD ^ (self.road[!color] | self.block.white | self.block.black);
+            let (my_road, opp_road) = self.road.get(color);
+            let (my_block, opp_block) = self.block.get(color);
 
-            let total_dist = flood_distance(inf[BOTTOM], inf[TOP], traversible, road)
-                + flood_distance(inf[LEFT], inf[RIGHT], traversible, road);
+            let my_wall = !my_road & my_block;
+            let opp_piece = opp_road | opp_block;
+            // let opp_flat = opp_road & !opp_block;
+
+            let opp_supports = opp_piece | my_wall;
+
+            let right = opp_supports.shift(Right);
+            let up = opp_supports.shift(Up);
+            let left = opp_supports.shift(Left);
+            let down = opp_supports.shift(Down);
+
+            let edge_right = right | EDGE_LEFT;
+            let edge_up = up | EDGE_BOTTOM;
+            let edge_left = left | EDGE_RIGHT;
+            let edge_down = down | EDGE_TOP;
+
+            let prot_hard_horz = edge_right & edge_left;
+            let prot_hard_vert = edge_up & edge_down;
+
+            let prot_soft_horz = edge_right | edge_left;
+            let prot_soft_vert = edge_up | edge_down;
+
+            let prot_soft_no_edge_horz = right | left;
+            let prot_soft_no_edge_vert = up | down;
+
+            let blocked_horz = prot_hard_vert | prot_soft_no_edge_horz & prot_soft_vert;
+            let blocked_vert = prot_hard_horz | prot_soft_no_edge_vert & prot_soft_horz;
+
+            let nontraversable = my_wall | opp_block;
+
+            let traversable_horz = BOARD ^ (nontraversable | opp_road & blocked_horz);
+            let traversable_vert = BOARD ^ (nontraversable | opp_road & blocked_vert);
+
+            let dist_horz = flood_distance(inf[LEFT], inf[RIGHT], traversable_horz, my_road);
+            let dist_vert = flood_distance(inf[BOTTOM], inf[TOP], traversable_vert, my_road);
+
+            let total_dist = dist_horz + dist_vert;
 
             self.stones_left[color] as i32 * -20
                 + self.caps_left[color] as i32 * -30
@@ -207,7 +241,7 @@ impl State {
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + 26)
+        Eval::new(eval_half(color) - eval_half(!color) + 22)
     }
 
     // Performance experiment: swap C and &mut Self.
