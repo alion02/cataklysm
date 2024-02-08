@@ -55,4 +55,9 @@ const COL: Bitboard = {
     col
 };
 
+const EDGE_BOTTOM: Bitboard = ROW;
+const EDGE_TOP: Bitboard = ROW << (SIZE - 1) * ROW_LEN;
+const EDGE_LEFT: Bitboard = COL;
+const EDGE_RIGHT: Bitboard = COL << SIZE - 1;
+
 const BOARD: Bitboard = ROW * COL;

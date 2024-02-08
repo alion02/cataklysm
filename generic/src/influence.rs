@@ -13,10 +13,10 @@ impl Influence {
     pub const EDGES: Self = {
         let mut edges = [0; 4];
 
-        edges[BOTTOM] = sq(0).row_bitboard();
-        edges[TOP] = sq((SIZE - 1) * ROW_LEN).row_bitboard();
-        edges[LEFT] = sq(0).col_bitboard();
-        edges[RIGHT] = sq(SIZE - 1).col_bitboard();
+        edges[BOTTOM] = EDGE_BOTTOM;
+        edges[TOP] = EDGE_TOP;
+        edges[LEFT] = EDGE_LEFT;
+        edges[RIGHT] = EDGE_RIGHT;
 
         Self(edges)
     };

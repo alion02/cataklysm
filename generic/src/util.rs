@@ -8,9 +8,9 @@ pub trait BitboardExt {
 impl BitboardExt for Bitboard {
     fn shift(self, dir: Direction) -> Self {
         match dir {
-            Right => self << 1 & !if PADDING != 0 { 0 } else { COL },
+            Right => self << 1 & !if PADDING != 0 { 0 } else { EDGE_LEFT },
             Up => self << ROW_LEN,
-            Left => self >> 1 & !if PADDING != 0 { 0 } else { COL << SIZE - 1 },
+            Left => self >> 1 & !if PADDING != 0 { 0 } else { EDGE_RIGHT },
             Down => self >> ROW_LEN,
         }
     }
