@@ -56,7 +56,7 @@ pub fn flood_distance(
     traversable: Bitboard,
     fast: Bitboard,
 ) -> u32 {
-    const DIST_CAP: u32 = SIZE as u32;
+    const DIST_CAP: u32 = SIZE as u32 - 1;
 
     let mut c = start & traversable;
     if c & goal != 0 {
