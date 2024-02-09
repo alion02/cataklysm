@@ -233,15 +233,17 @@ impl State {
             let dist_vert = flood_distance(inf[BOTTOM], inf[TOP], traversable_vert, my_road);
 
             let total_dist = dist_horz + dist_vert;
+            let smaller_dist = min(dist_horz, dist_vert);
 
             self.stones_left[color] as i32 * -20
                 + self.caps_left[color] as i32 * -30
                 + self.count_flats(color) as i32 * 14
-                + total_dist as i32 * -6
+                + total_dist as i32 * -2
+                + smaller_dist as i32 * -4
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + 22)
+        Eval::new(eval_half(color) - eval_half(!color) + 21)
     }
 
     // Performance experiment: swap C and &mut Self.

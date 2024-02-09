@@ -31,6 +31,7 @@ use alloc::sync::Arc;
 use core::{
     any::Any,
     array::from_fn as make_arr,
+    cmp::min,
     fmt,
     mem::transmute,
     ops::{
