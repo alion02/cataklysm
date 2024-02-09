@@ -64,7 +64,7 @@ pub fn flood_distance(
     }
 
     for cost in 1..DIST_CAP {
-        // Spread to traversible neighbors
+        // Spread to traversable neighbors
         let mut nc = c.spread() & traversable | c;
 
         if nc & goal != 0 {
@@ -72,7 +72,7 @@ pub fn flood_distance(
         }
 
         if c == nc {
-            // If no more traversible neighbors, no road possible
+            // If no more traversable neighbors, no road possible
             break;
         }
 
