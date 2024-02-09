@@ -235,9 +235,9 @@ impl State {
             let total_dist = dist_horz + dist_vert;
             let smaller_dist = min(dist_horz, dist_vert);
 
-            self.stones_left[color] as i32 * -20
+            self.stones_left[color] as i32 * -14
                 + self.caps_left[color] as i32 * -30
-                + self.count_flats(color) as i32 * 14
+                + self.count_flats(color) as i32 * 20
                 + total_dist as i32 * -2
                 + smaller_dist as i32 * -4
         };
