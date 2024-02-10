@@ -2,7 +2,7 @@ use alloc::{boxed::Box, sync::Arc};
 use core::{
     any::Any,
     fmt,
-    ops::Neg,
+    ops::{Add, Neg, Sub},
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 
@@ -69,6 +69,22 @@ impl Neg for Eval {
 
     fn neg(self) -> Self::Output {
         Self(-self.0)
+    }
+}
+
+impl Add<i32> for Eval {
+    type Output = Self;
+
+    fn add(self, rhs: i32) -> Self {
+        Self::new(self.0 + rhs)
+    }
+}
+
+impl Sub<i32> for Eval {
+    type Output = Self;
+
+    fn sub(self, rhs: i32) -> Self {
+        Self::new(self.0 - rhs)
     }
 }
 

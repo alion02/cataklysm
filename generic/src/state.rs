@@ -110,13 +110,28 @@ impl State {
                             Action::PASS
                         };
 
+                        let mut allow_scout_window = false;
                         let mut f = |s: &mut Self, action| {
                             if s.abort.load(Relaxed) {
                                 return Break(());
                             }
 
-                            let score =
-                                -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
+                            let mut score;
+                            'skip_full_window: {
+                                if allow_scout_window {
+                                    score = -s.with(true, action, |s| {
+                                        s.search(depth - 1, -alpha - 1, -alpha)
+                                    });
+
+                                    if score <= alpha || score >= beta {
+                                        break 'skip_full_window;
+                                    }
+                                }
+
+                                allow_scout_window = true;
+                                score =
+                                    -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
+                            }
 
                             if score > best_score {
                                 best_score = score;
