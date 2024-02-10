@@ -1,7 +1,7 @@
 use crate::*;
 
-const HIST_LEN: usize = 64;
-const KILLERS_LEN: usize = 32;
+const HASH_LEN: usize = 64;
+const KILLER_LEN: usize = 32;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -25,9 +25,9 @@ pub struct State {
 
     influence: Pair<Influence>,
 
-    hashes: WrappingArray<Hash, HIST_LEN>,
+    hashes: WrappingArray<Hash, HASH_LEN>,
 
-    killers: WrappingArray<Action, KILLERS_LEN>,
+    killers: WrappingArray<Action, KILLER_LEN>,
 
     tt: Box<[TtBucket]>,
 }
@@ -57,7 +57,7 @@ impl State {
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
             influence: Pair::both(Influence::EDGES),
-            hashes: WrappingArray([Hash::ZERO; HIST_LEN]),
+            hashes: WrappingArray([Hash::ZERO; HASH_LEN]),
             killers: WrappingArray(Default::default()),
             tt: core::iter::repeat(TtBucket::default())
                 .take(opt.tt_size)
