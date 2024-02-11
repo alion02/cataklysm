@@ -30,6 +30,9 @@ pub struct State {
     killers: WrappingArray<Action, KILLER_LEN>,
 
     tt: Box<[TtBucket]>,
+
+    // TODO: Add cargo feature to make this a ZST
+    params: Params,
 }
 
 impl State {
@@ -38,7 +41,7 @@ impl State {
             return Err(NewGameError);
         }
 
-        if !opt.tt_size.is_power_of_two() {
+        if !opt.params.tt_size.is_power_of_two() {
             return Err(NewGameError);
         }
 
@@ -60,9 +63,10 @@ impl State {
             hashes: WrappingArray([Hash::ZERO; HASH_LEN]),
             killers: WrappingArray(Default::default()),
             tt: core::iter::repeat(TtBucket::default())
-                .take(opt.tt_size)
+                .take(opt.params.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
+            params: opt.params,
         })
     }
 
@@ -128,7 +132,7 @@ impl State {
                                     }
                                 }
 
-                                allow_scout_window = true;
+                                allow_scout_window = s.params.use_pvs;
                                 score =
                                     -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
                             }
@@ -244,21 +248,23 @@ impl State {
             let traversable_horz = BOARD ^ (nontraversable | opp_road & blocked_horz);
             let traversable_vert = BOARD ^ (nontraversable | opp_road & blocked_vert);
 
-            let dist_horz = flood_distance(inf[LEFT], inf[RIGHT], traversable_horz, my_road);
-            let dist_vert = flood_distance(inf[BOTTOM], inf[TOP], traversable_vert, my_road);
+            let dist_horz = self.flood_distance(inf[LEFT], inf[RIGHT], traversable_horz, my_road);
+            let dist_vert = self.flood_distance(inf[BOTTOM], inf[TOP], traversable_vert, my_road);
 
             let total_dist = dist_horz + dist_vert;
             let smaller_dist = min(dist_horz, dist_vert);
 
-            self.stones_left[color] as i32 * -14
-                + self.caps_left[color] as i32 * -30
-                + self.count_flats(color) as i32 * 20
-                + total_dist as i32 * -2
-                + smaller_dist as i32 * -4
+            let raw = self.count_flats(color) as i32 * self.params.flat_count
+                + self.stones_left[color] as i32 * self.params.stones_left
+                + self.caps_left[color] as i32 * self.params.caps_left
+                + total_dist * self.params.total_dist
+                + smaller_dist * self.params.smallest_dist;
+
+            raw * 2
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + 21)
+        Eval::new(eval_half(color) - eval_half(!color) + self.params.side_to_move)
     }
 
     // Performance experiment: swap C and &mut Self.
@@ -648,6 +654,52 @@ impl State {
         ongoing(state, self)
     }
 
+    fn flood_distance(
+        &self,
+        start: Bitboard,
+        goal: Bitboard,
+        traversable: Bitboard,
+        fast: Bitboard,
+    ) -> i32 {
+        let dist_cap = SIZE as i32 + self.params.dist_cap_offset;
+
+        let mut c = start & traversable;
+        if c & goal != 0 {
+            return 0;
+        }
+
+        for cost in 1..dist_cap {
+            // Spread to traversable neighbors
+            let mut nc = c.spread() & traversable | c;
+
+            if nc & goal != 0 {
+                return cost;
+            }
+
+            if c == nc {
+                // If no more traversable neighbors, no road possible
+                break;
+            }
+
+            loop {
+                let new_fast = nc & !c & fast;
+                c = nc;
+
+                if new_fast == 0 {
+                    break;
+                }
+
+                nc |= new_fast.spread() & traversable;
+
+                if nc & goal != 0 {
+                    return cost;
+                }
+            }
+        }
+
+        dist_cap
+    }
+
     #[inline]
     fn has_road(&self, color: bool) -> bool {
         self.influence[color].intersections_of_opposites() & self.road[color] != 0
@@ -666,10 +718,6 @@ impl State {
 
 impl Game for State {
     fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>) {
-        const ASPIRATION_WINDOW: i32 = 20;
-        const ASPIRATION_SCALING: i32 = 4;
-        const ASPIRATION_ATTEMPTS: u32 = 0;
-
         assert!(depth > 0);
 
         let (idx, sig) = self.hash_mut().split(self.tt.len());
@@ -682,11 +730,11 @@ impl Game for State {
             }) = self.tt[idx].entry(sig)
             {
                 if packed.is_exact() {
-                    let mut alpha_margin = ASPIRATION_WINDOW;
-                    let mut beta_margin = ASPIRATION_WINDOW;
+                    let mut alpha_margin = self.params.aspiration_window;
+                    let mut beta_margin = self.params.aspiration_window;
 
                     #[allow(clippy::reversed_empty_ranges)]
-                    for _ in 0..ASPIRATION_ATTEMPTS {
+                    for _ in 0..self.params.aspiration_attempts {
                         let alpha = expected_score - alpha_margin;
                         let beta = expected_score + beta_margin;
 
@@ -697,10 +745,10 @@ impl Game for State {
                         }
 
                         if score <= alpha {
-                            alpha_margin *= ASPIRATION_SCALING;
+                            alpha_margin *= self.params.aspiration_scaling;
                         }
                         if score >= beta {
-                            beta_margin *= ASPIRATION_SCALING;
+                            beta_margin *= self.params.aspiration_scaling;
                         }
                     }
                 }

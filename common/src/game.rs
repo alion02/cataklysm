@@ -6,13 +6,18 @@ use core::{
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };
 
-use crate::{hash::Hash, pair::Pair};
+use crate::{
+    hash::Hash,
+    pair::Pair,
+    params::{Params, DEFAULT_PARAMS},
+};
 
 pub struct Options {
     pub start_stones: Pair<u32>,
     pub start_caps: Pair<u32>,
     pub half_komi: i32,
-    pub tt_size: usize,
+
+    pub params: Params,
 }
 
 impl Options {
@@ -31,7 +36,8 @@ impl Options {
             start_stones: Pair::both(stones),
             start_caps: Pair::both(caps),
             half_komi: 0,
-            tt_size: 1 << 24,
+
+            params: DEFAULT_PARAMS,
         })
     }
 }

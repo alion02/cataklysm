@@ -22,6 +22,7 @@ use common::{
     game::*,
     hash::*,
     pair::*,
+    params::*,
     stack::*,
     state::{Direction::*, Piece::*, *},
     util::*,
