@@ -179,7 +179,7 @@ impl State {
                     };
 
                     if rate_entry(depth as _, s.generation, s.generation)
-                        > rate_entry(entry.depth, entry.packed.generation(), s.generation)
+                        >= rate_entry(entry.depth, entry.packed.generation(), s.generation)
                     {
                         entry.sig = sig;
                         entry.score = best_score;
@@ -663,16 +663,52 @@ impl State {
 
 impl Game for State {
     fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>) {
+        const ASPIRATION_WINDOW: i32 = 20;
+        const ASPIRATION_SCALING: i32 = 4;
+        const ASPIRATION_ATTEMPTS: u32 = 0;
+
         assert!(depth > 0);
 
-        self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+        let (idx, sig) = self.hash_mut().split(self.tt.len());
+
+        'skip_full_window: {
+            if let Some(&mut TtEntry {
+                score: expected_score,
+                packed,
+                ..
+            }) = self.tt[idx].entry(sig)
+            {
+                if packed.is_exact() {
+                    let mut alpha_margin = ASPIRATION_WINDOW;
+                    let mut beta_margin = ASPIRATION_WINDOW;
+
+                    #[allow(clippy::reversed_empty_ranges)]
+                    for _ in 0..ASPIRATION_ATTEMPTS {
+                        let alpha = expected_score - alpha_margin;
+                        let beta = expected_score + beta_margin;
+
+                        let score = self.search(depth, alpha, beta);
+
+                        if score > alpha && score < beta {
+                            break 'skip_full_window;
+                        }
+
+                        if score <= alpha {
+                            alpha_margin *= ASPIRATION_SCALING;
+                        }
+                        if score >= beta {
+                            beta_margin *= ASPIRATION_SCALING;
+                        }
+                    }
+                }
+            }
+
+            self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+        }
 
         self.generation += 1;
 
-        let (idx, sig) = self.hash_mut().split(self.tt.len());
-        let bucket = &mut self.tt[idx];
-        let entry = bucket.entry(sig).unwrap();
-
+        let entry = self.tt[idx].entry(sig).unwrap();
         (entry.score, Box::new(entry.action))
     }
 

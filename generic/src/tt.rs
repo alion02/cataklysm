@@ -43,6 +43,10 @@ impl Packed {
         self.0 & 0x80 == 0
     }
 
+    pub fn is_exact(self) -> bool {
+        self.0 & 0xC0 == 0
+    }
+
     pub fn generation(self) -> u32 {
         self.0 as u32 & 0x3F
     }
