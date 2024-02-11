@@ -4,6 +4,7 @@ use core::fmt;
 pub struct Hand(u32);
 
 impl Hand {
+    #[inline]
     pub fn one_piece(color: bool) -> Self {
         Self((color as u32).rotate_right(1))
     }
@@ -27,6 +28,7 @@ impl fmt::Display for DropCounts {
 impl Iterator for DropCounts {
     type Item = u32;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         (self.0 != 0).then(|| {
             let r = self.0.trailing_zeros();
@@ -35,21 +37,25 @@ impl Iterator for DropCounts {
         })
     }
 
+    #[inline]
     fn count(self) -> usize {
         self.0.count_ones() as usize
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         let c = self.count();
         (c, Some(c))
     }
 
+    #[inline]
     fn last(mut self) -> Option<Self::Item> {
         self.next_back()
     }
 }
 
 impl DoubleEndedIterator for DropCounts {
+    #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         (self.0 != 0).then(|| {
             let t = self.0.leading_zeros();
@@ -71,6 +77,7 @@ macro_rules! stack {
             pub struct Stack(StackBacking);
 
             impl Default for Stack {
+                #[inline]
                 fn default() -> Self {
                     Self::EMPTY
                 }
@@ -80,12 +87,14 @@ macro_rules! stack {
                 pub const EMPTY: Self = Self(1);
                 pub const CAPACITY: u32 = StackBacking::BITS - 1;
 
+                #[inline]
                 pub fn raw(self) -> StackBacking {
                     self.0
                 }
 
                 /// # Safety
                 /// `backing` must be nonzero.
+                #[inline]
                 pub unsafe fn from_raw(backing: StackBacking) -> Self {
                     debug_assert!(backing > 0);
                     Self(backing)
@@ -93,23 +102,28 @@ macro_rules! stack {
 
                 /// # Note
                 /// The returned [`Stack`] may be nonsensical if `hand` contains more pieces than `count`.
+                #[inline]
                 pub fn from_hand_and_count(hand: Hand, count: u32) -> Self {
                     debug_assert!(count > 0);
                     Self((1 | hand.0).rotate_left(count) as _)
                 }
 
+                #[inline]
                 pub fn one_tall(color: bool) -> Self {
                     Self(0b10 | color as StackBacking)
                 }
 
+                #[inline]
                 pub fn height(self) -> u32 {
                     self.0.leading_zeros() ^ StackBacking::BITS - 1
                 }
 
+                #[inline]
                 pub fn is_empty(self) -> bool {
                     self == Stack::EMPTY
                 }
 
+                #[inline]
                 pub fn drop(&mut self, hand: &mut Hand, count: u32) {
                     debug_assert!(count != 0);
                     debug_assert!(self.height() + count <= Stack::CAPACITY);
@@ -119,6 +133,7 @@ macro_rules! stack {
                     hand.0 <<= count;
                 }
 
+                #[inline]
                 pub fn take(&mut self, count: u32) -> Hand {
                     debug_assert!(count != 0);
                     debug_assert!(self.height() >= count);
@@ -128,10 +143,12 @@ macro_rules! stack {
                     r
                 }
 
+                #[inline]
                 pub fn top(self) -> Option<bool> {
                     (!self.is_empty()).then_some(self.0 & 1 != 0)
                 }
 
+                #[inline]
                 pub fn top_unchecked(self) -> bool {
                     debug_assert!(!self.is_empty());
                     self.0 & 1 != 0

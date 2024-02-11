@@ -67,6 +67,7 @@ impl fmt::Display for Eval {
 impl Neg for Eval {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         Self(-self.0)
     }
@@ -75,6 +76,7 @@ impl Neg for Eval {
 impl Add<i32> for Eval {
     type Output = Self;
 
+    #[inline]
     fn add(self, rhs: i32) -> Self {
         Self::new(self.0 + rhs)
     }
@@ -83,6 +85,7 @@ impl Add<i32> for Eval {
 impl Sub<i32> for Eval {
     type Output = Self;
 
+    #[inline]
     fn sub(self, rhs: i32) -> Self {
         Self::new(self.0 - rhs)
     }
@@ -93,28 +96,34 @@ impl Eval {
     pub const DECISIVE: Self = Self(1 << 16);
     pub const MAX: Self = Self(1 << 24);
 
+    #[inline]
     pub fn new(value: i32) -> Self {
         let eval = Self(value);
         debug_assert!(eval.abs() <= Self::MAX);
         eval
     }
 
+    #[inline]
     pub fn win(ply: u32) -> Eval {
         Self::new(Self::MAX.0 - ply as i32)
     }
 
+    #[inline]
     pub fn loss(ply: u32) -> Eval {
         Self::new(ply as i32 - Self::MAX.0)
     }
 
+    #[inline]
     pub fn is_decisive(self) -> bool {
         self.abs() >= Self::DECISIVE
     }
 
+    #[inline]
     pub fn abs(self) -> Self {
         Self(self.0.abs())
     }
 
+    #[inline]
     pub fn raw(self) -> i32 {
         self.0
     }
@@ -132,10 +141,12 @@ pub struct SetPositionError;
 pub struct AbortFlag(Arc<AtomicBool>);
 
 impl AbortFlag {
+    #[inline]
     pub fn new(flag: &Arc<AtomicBool>) -> Self {
         Self(flag.clone())
     }
 
+    #[inline]
     pub fn set(self) {
         self.0.store(true, Relaxed);
     }

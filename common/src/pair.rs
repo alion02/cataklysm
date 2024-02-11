@@ -15,6 +15,7 @@ pub struct Pair<T> {
 impl<T> Index<bool> for Pair<T> {
     type Output = T;
 
+    #[inline]
     fn index(&self, index: bool) -> &T {
         match index {
             WHITE => &self.white,
@@ -24,6 +25,7 @@ impl<T> Index<bool> for Pair<T> {
 }
 
 impl<T> IndexMut<bool> for Pair<T> {
+    #[inline]
     fn index_mut(&mut self, index: bool) -> &mut T {
         match index {
             WHITE => &mut self.white,
@@ -33,10 +35,12 @@ impl<T> IndexMut<bool> for Pair<T> {
 }
 
 impl<T> Pair<T> {
+    #[inline]
     pub fn new(white: T, black: T) -> Self {
         Self { white, black }
     }
 
+    #[inline]
     pub fn get(self, color: bool) -> (T, T) {
         match color {
             WHITE => (self.white, self.black),
@@ -44,6 +48,7 @@ impl<T> Pair<T> {
         }
     }
 
+    #[inline]
     pub fn get_ref(&self, color: bool) -> (&T, &T) {
         match color {
             WHITE => (&self.white, &self.black),
@@ -51,6 +56,7 @@ impl<T> Pair<T> {
         }
     }
 
+    #[inline]
     pub fn get_mut(&mut self, color: bool) -> (&mut T, &mut T) {
         match color {
             WHITE => (&mut self.white, &mut self.black),
@@ -58,17 +64,20 @@ impl<T> Pair<T> {
         }
     }
 
+    #[inline]
     pub fn map<U>(self, mut f: impl FnMut(T) -> U) -> Pair<U> {
         Pair::new(f(self.white), f(self.black))
     }
 
-    pub fn map_mut<U>(&mut self, mut f: impl FnMut(&mut T)) {
+    #[inline]
+    pub fn map_mut(&mut self, mut f: impl FnMut(&mut T)) {
         f(&mut self.white);
         f(&mut self.black);
     }
 }
 
 impl<T: Copy> Pair<T> {
+    #[inline]
     pub fn both(value: T) -> Self {
         Self {
             white: value,

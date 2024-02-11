@@ -19,18 +19,22 @@ impl fmt::Display for Piece {
 }
 
 impl Piece {
+    #[inline]
     pub fn is_road(self) -> bool {
         self as u32 & 1 != 0
     }
 
+    #[inline]
     pub fn is_block(self) -> bool {
         self as u32 & 2 != 0
     }
 
+    #[inline]
     pub fn is_stone(self) -> bool {
         self != Self::Cap
     }
 
+    #[inline]
     pub fn is_flat(self) -> bool {
         self == Self::Flat
     }
@@ -59,6 +63,7 @@ impl fmt::Display for Direction {
 impl Neg for Direction {
     type Output = Self;
 
+    #[inline]
     fn neg(self) -> Self::Output {
         // Generates a lookup table
         // match self {
