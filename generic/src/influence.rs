@@ -76,6 +76,7 @@ impl Influence {
     //     *self |= Self(self.0.map(|b| if b & new_road != 0 { point } else { 0 }));
     // }
 
+    #[inline]
     pub fn spread(self) -> Self {
         Self(self.0.map(Bitboard::spread))
     }
@@ -88,12 +89,14 @@ impl Influence {
 impl BitAnd<Bitboard> for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitand(self, rhs: Bitboard) -> Self::Output {
         Self(self.0.map(|lhs| lhs & rhs))
     }
 }
 
 impl BitAndAssign<Bitboard> for Influence {
+    #[inline]
     fn bitand_assign(&mut self, rhs: Bitboard) {
         for lhs in &mut self.0 {
             *lhs &= rhs;
@@ -104,12 +107,14 @@ impl BitAndAssign<Bitboard> for Influence {
 impl BitOr<Bitboard> for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitor(self, rhs: Bitboard) -> Self::Output {
         Self(self.0.map(|lhs| lhs | rhs))
     }
 }
 
 impl BitOrAssign<Bitboard> for Influence {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Bitboard) {
         for lhs in &mut self.0 {
             *lhs |= rhs;
@@ -120,12 +125,14 @@ impl BitOrAssign<Bitboard> for Influence {
 impl BitXor<Bitboard> for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitxor(self, rhs: Bitboard) -> Self::Output {
         Self(self.0.map(|lhs| lhs ^ rhs))
     }
 }
 
 impl BitXorAssign<Bitboard> for Influence {
+    #[inline]
     fn bitxor_assign(&mut self, rhs: Bitboard) {
         for lhs in &mut self.0 {
             *lhs ^= rhs;
@@ -136,12 +143,14 @@ impl BitXorAssign<Bitboard> for Influence {
 impl BitAnd for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitand(self, rhs: Self) -> Self::Output {
         Self(make_arr(|i| self[i] & rhs[i]))
     }
 }
 
 impl BitAndAssign for Influence {
+    #[inline]
     fn bitand_assign(&mut self, rhs: Self) {
         for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
             *lhs &= rhs;
@@ -152,12 +161,14 @@ impl BitAndAssign for Influence {
 impl BitOr for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitor(self, rhs: Self) -> Self::Output {
         Self(make_arr(|i| self[i] | rhs[i]))
     }
 }
 
 impl BitOrAssign for Influence {
+    #[inline]
     fn bitor_assign(&mut self, rhs: Self) {
         for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
             *lhs |= rhs;
@@ -168,12 +179,14 @@ impl BitOrAssign for Influence {
 impl BitXor for Influence {
     type Output = Influence;
 
+    #[inline]
     fn bitxor(self, rhs: Self) -> Self::Output {
         Self(make_arr(|i| self[i] ^ rhs[i]))
     }
 }
 
 impl BitXorAssign for Influence {
+    #[inline]
     fn bitxor_assign(&mut self, rhs: Self) {
         for (lhs, rhs) in self.0.iter_mut().zip(rhs.0) {
             *lhs ^= rhs;
@@ -184,18 +197,21 @@ impl BitXorAssign for Influence {
 impl Index<usize> for Influence {
     type Output = Bitboard;
 
+    #[inline]
     fn index(&self, index: usize) -> &Self::Output {
         &self.0[index]
     }
 }
 
 impl IndexMut<usize> for Influence {
+    #[inline]
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.0[index]
     }
 }
 
 impl PartialEq for Influence {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         (0..4).all(|i| self[i] == other[i])
     }

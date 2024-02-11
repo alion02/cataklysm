@@ -6,6 +6,7 @@ pub trait BitboardExt {
 }
 
 impl BitboardExt for Bitboard {
+    #[inline]
     fn shift(self, dir: Direction) -> Self {
         match dir {
             Right => self << 1 & !if PADDING != 0 { 0 } else { EDGE_LEFT },
@@ -15,11 +16,13 @@ impl BitboardExt for Bitboard {
         }
     }
 
+    #[inline]
     fn spread(self) -> Self {
         self.shift(Right) | self.shift(Left) | self.shift(Up) | self.shift(Down)
     }
 }
 
+#[inline]
 pub fn ray(src: Square, dir: Direction) -> Bitboard {
     match dir {
         Right => src.row_bitboard() & !1 << src.0,
@@ -29,6 +32,7 @@ pub fn ray(src: Square, dir: Direction) -> Bitboard {
     }
 }
 
+#[inline]
 pub fn closest_hit(ray_hits: Bitboard, dir: Direction) -> Bitboard {
     ray_hits
         & match dir {
@@ -37,6 +41,7 @@ pub fn closest_hit(ray_hits: Bitboard, dir: Direction) -> Bitboard {
         }
 }
 
+#[inline]
 pub fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
     (match dir {
         Right => hit.0 - src.0,
@@ -46,6 +51,7 @@ pub fn distance(src: Square, hit: Square, dir: Direction) -> u32 {
     }) as u32
 }
 
+#[inline]
 pub fn bit_squares(bitboard: Bitboard) -> impl Iterator<Item = Square> {
     Bits::new([bitboard]).map(|s| sq(s as usize))
 }

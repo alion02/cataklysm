@@ -648,14 +648,17 @@ impl State {
         ongoing(state, self)
     }
 
+    #[inline]
     fn has_road(&self, color: bool) -> bool {
         self.influence[color].intersections_of_opposites() & self.road[color] != 0
     }
 
+    #[inline]
     fn count_flats(&self, color: bool) -> u32 {
         (self.road[color] & !self.block[color]).count_ones()
     }
 
+    #[inline]
     fn hash_mut(&mut self) -> &mut Hash {
         &mut self.hashes[self.ply]
     }

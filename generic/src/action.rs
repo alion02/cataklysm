@@ -9,10 +9,12 @@ impl Action {
 
     pub const PASS: Self = Self(0);
 
+    #[inline]
     pub fn place(sq: Square, piece: Piece) -> Self {
         Self(sq.0 as ActionBacking | (piece as ActionBacking) << Self::TYPE_OFFSET)
     }
 
+    #[inline]
     pub fn spread(sq: Square, dir: Direction, pat: Pattern) -> Self {
         Self(
             sq.0 as ActionBacking
@@ -23,6 +25,7 @@ impl Action {
 
     // `self.0 as u32` is unnecessary iff Action is backed by u32
     #[allow(clippy::unnecessary_cast)]
+    #[inline]
     pub fn branch<S, R>(
         self,
         state: S,
@@ -51,6 +54,7 @@ impl Action {
 }
 
 impl Default for Action {
+    #[inline]
     fn default() -> Self {
         Self::PASS
     }
@@ -77,6 +81,7 @@ impl fmt::Display for Action {
 }
 
 impl Move for Action {
+    #[inline]
     fn as_any(self: Box<Self>) -> Box<dyn Any> {
         self
     }
@@ -85,6 +90,7 @@ impl Move for Action {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Pattern(u32);
 
+#[inline]
 pub fn pat(pat: u32) -> Pattern {
     debug_assert!(pat > 0);
     debug_assert!(pat < 1 << HAND);
@@ -93,6 +99,7 @@ pub fn pat(pat: u32) -> Pattern {
 }
 
 impl Pattern {
+    #[inline]
     pub fn execute(self) -> (u32, DropCounts) {
         let mut dc = DropCounts(self.0 | 1 << HAND);
         // TODO: Investigate unwrap

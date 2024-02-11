@@ -5,10 +5,12 @@ use crate::*;
 pub struct TtBucket([TtEntry; 2]);
 
 impl TtBucket {
+    #[inline]
     pub fn entry(&mut self, sig: u64) -> Option<&mut TtEntry> {
         self.0.iter_mut().find(|e| e.sig == sig)
     }
 
+    #[inline]
     pub fn worst_entry(&mut self, curr_gen: u32) -> &mut TtEntry {
         self.0
             .iter_mut()
@@ -27,6 +29,7 @@ pub struct TtEntry {
 }
 
 // TODO: Cleanup
+#[inline]
 pub fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> i32 {
     depth as i32 - (curr_gen - entry_gen & 0x3F) as i32
 }
@@ -35,30 +38,37 @@ pub fn rate_entry(depth: u8, entry_gen: u32, curr_gen: u32) -> i32 {
 pub struct Packed(u8);
 
 impl Packed {
+    #[inline]
     pub fn is_upper(self) -> bool {
         self.0 & 0x40 == 0
     }
 
+    #[inline]
     pub fn is_lower(self) -> bool {
         self.0 & 0x80 == 0
     }
 
+    #[inline]
     pub fn is_exact(self) -> bool {
         self.0 & 0xC0 == 0
     }
 
+    #[inline]
     pub fn generation(self) -> u32 {
         self.0 as u32 & 0x3F
     }
 
+    #[inline]
     pub fn set_upper(&mut self) {
         self.0 |= 0x80;
     }
 
+    #[inline]
     pub fn set_lower(&mut self) {
         self.0 |= 0x40;
     }
 
+    #[inline]
     pub fn set_generation(&mut self, generation: u32) {
         self.0 = self.0 & !0x3F | generation as u8 & 0x3F;
     }
