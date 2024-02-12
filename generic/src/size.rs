@@ -2,6 +2,29 @@ use crate::*;
 
 pub use inner::*;
 
+#[derive(Debug)]
+pub struct EvalParams {
+    pub max_dist_offset: i32,
+
+    pub flat_count: i32,
+    pub stones_left: i32,
+    pub caps_left: i32,
+    pub total_dist: i32,
+    pub smallest_dist: i32,
+    pub side_to_move: i32,
+}
+
+pub const EVAL_PARAMS: EvalParams = EvalParams {
+    max_dist_offset: -1,
+
+    flat_count: 10,
+    stones_left: -7,
+    caps_left: -15,
+    total_dist: -1,
+    smallest_dist: -2,
+    side_to_move: 21,
+};
+
 #[cfg(feature = "3")]
 mod inner {
     use super::*;

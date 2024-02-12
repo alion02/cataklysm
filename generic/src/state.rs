@@ -31,8 +31,9 @@ pub struct State {
 
     tt: Box<[TtBucket]>,
 
-    // TODO: Add cargo feature to make this a ZST
-    params: Params,
+    // TODO: Add cargo feature to make these ZSTs
+    search: SearchParams,
+    eval: EvalParams,
 }
 
 impl State {
@@ -66,7 +67,8 @@ impl State {
                 .take(opt.params.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
-            params: opt.params,
+            search: opt.params,
+            eval: EVAL_PARAMS,
         })
     }
 
@@ -132,7 +134,7 @@ impl State {
                                     }
                                 }
 
-                                allow_scout_window = s.params.use_pvs;
+                                allow_scout_window = s.search.use_pvs;
                                 score =
                                     -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
                             }
@@ -254,17 +256,17 @@ impl State {
             let total_dist = dist_horz + dist_vert;
             let smaller_dist = min(dist_horz, dist_vert);
 
-            let raw = self.count_flats(color) as i32 * self.params.flat_count
-                + self.stones_left[color] as i32 * self.params.stones_left
-                + self.caps_left[color] as i32 * self.params.caps_left
-                + total_dist * self.params.total_dist
-                + smaller_dist * self.params.smallest_dist;
+            let raw = self.count_flats(color) as i32 * self.eval.flat_count
+                + self.stones_left[color] as i32 * self.eval.stones_left
+                + self.caps_left[color] as i32 * self.eval.caps_left
+                + total_dist * self.eval.total_dist
+                + smaller_dist * self.eval.smallest_dist;
 
             raw * 2
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + self.params.side_to_move)
+        Eval::new(eval_half(color) - eval_half(!color) + self.eval.side_to_move)
     }
 
     // Performance experiment: swap C and &mut Self.
@@ -661,14 +663,14 @@ impl State {
         traversable: Bitboard,
         fast: Bitboard,
     ) -> i32 {
-        let dist_cap = SIZE as i32 + self.params.dist_cap_offset;
+        let max_dist = SIZE as i32 + self.eval.max_dist_offset;
 
         let mut c = start & traversable;
         if c & goal != 0 {
             return 0;
         }
 
-        for cost in 1..dist_cap {
+        for cost in 1..max_dist {
             // Spread to traversable neighbors
             let mut nc = c.spread() & traversable | c;
 
@@ -697,7 +699,7 @@ impl State {
             }
         }
 
-        dist_cap
+        max_dist
     }
 
     #[inline]
@@ -730,11 +732,11 @@ impl Game for State {
             }) = self.tt[idx].entry(sig)
             {
                 if packed.is_exact() {
-                    let mut alpha_margin = self.params.aspiration_window;
-                    let mut beta_margin = self.params.aspiration_window;
+                    let mut alpha_margin = self.search.aspiration_window;
+                    let mut beta_margin = self.search.aspiration_window;
 
                     #[allow(clippy::reversed_empty_ranges)]
-                    for _ in 0..self.params.aspiration_attempts {
+                    for _ in 0..self.search.aspiration_attempts {
                         let alpha = expected_score - alpha_margin;
                         let beta = expected_score + beta_margin;
 
@@ -745,10 +747,10 @@ impl Game for State {
                         }
 
                         if score <= alpha {
-                            alpha_margin *= self.params.aspiration_scaling;
+                            alpha_margin *= self.search.aspiration_scaling;
                         }
                         if score >= beta {
-                            beta_margin *= self.params.aspiration_scaling;
+                            beta_margin *= self.search.aspiration_scaling;
                         }
                     }
                 }
