@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct SearchParams {
     pub aspiration_window: i32,
     pub aspiration_scaling: i32,
@@ -7,7 +7,7 @@ pub struct SearchParams {
     pub tt_size: usize,
 }
 
-pub const SEARCH_PARAMS: SearchParams = SearchParams {
+pub static SEARCH_PARAMS: SearchParams = SearchParams {
     aspiration_window: 20,
     aspiration_scaling: 4,
     aspiration_attempts: 0,

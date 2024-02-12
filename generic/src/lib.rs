@@ -6,7 +6,7 @@
 mod action;
 mod influence;
 mod lut;
-mod size;
+mod params;
 mod square;
 mod state;
 mod tt;
@@ -16,7 +16,7 @@ extern crate alloc;
 
 pub use state::State;
 
-use crate::{action::*, influence::*, lut::*, size::*, square::*, tt::*, util::*};
+use crate::{action::*, influence::*, lut::*, params::*, square::*, tt::*, util::*};
 
 use common::{
     game::*,
@@ -38,7 +38,7 @@ use core::{
     ops::{
         BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
         ControlFlow::{self, *},
-        Index, IndexMut,
+        Deref, Index, IndexMut,
     },
     sync::atomic::{AtomicBool, Ordering::Relaxed},
 };

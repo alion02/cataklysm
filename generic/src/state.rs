@@ -31,9 +31,8 @@ pub struct State {
 
     tt: Box<[TtBucket]>,
 
-    // TODO: Add cargo feature to make these ZSTs
-    search: SearchParams,
-    eval: EvalParams,
+    search: SearchParamsProvider,
+    eval: EvalParamsProvider,
 }
 
 impl State {
@@ -67,8 +66,8 @@ impl State {
                 .take(opt.params.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
-            search: opt.params,
-            eval: EVAL_PARAMS,
+            search: SearchParamsProvider::new(opt.params).ok_or(NewGameError)?,
+            eval: EvalParamsProvider::new(EVAL_PARAMS).ok_or(NewGameError)?,
         })
     }
 

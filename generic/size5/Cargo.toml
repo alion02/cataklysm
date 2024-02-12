@@ -9,7 +9,8 @@ edition = "2021"
 path = "../src/lib.rs"
 
 [features]
-default = ["5"]
+default = ["5", "runtime-config"]
+runtime-config = []
 5 = []
 
 [dependencies]

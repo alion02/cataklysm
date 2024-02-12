@@ -1,8 +1,9 @@
 use crate::*;
 
 pub use inner::*;
+pub use provider::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EvalParams {
     pub max_dist_offset: i32,
 
@@ -14,7 +15,7 @@ pub struct EvalParams {
     pub side_to_move: i32,
 }
 
-pub const EVAL_PARAMS: EvalParams = EvalParams {
+pub static EVAL_PARAMS: EvalParams = EvalParams {
     max_dist_offset: -1,
 
     flat_count: 10,
@@ -24,6 +25,84 @@ pub const EVAL_PARAMS: EvalParams = EvalParams {
     smallest_dist: -2,
     side_to_move: 21,
 };
+
+#[cfg(feature = "runtime-config")]
+mod provider {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct SearchParamsProvider(SearchParams);
+
+    impl SearchParamsProvider {
+        pub fn new(params: SearchParams) -> Option<Self> {
+            Some(Self(params))
+        }
+    }
+
+    impl Deref for SearchParamsProvider {
+        type Target = SearchParams;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct EvalParamsProvider(EvalParams);
+
+    impl EvalParamsProvider {
+        pub fn new(params: EvalParams) -> Option<Self> {
+            Some(Self(params))
+        }
+    }
+
+    impl Deref for EvalParamsProvider {
+        type Target = EvalParams;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+}
+
+#[cfg(not(feature = "runtime-config"))]
+mod provider {
+    use super::*;
+
+    #[derive(Debug)]
+    pub struct SearchParamsProvider;
+
+    impl SearchParamsProvider {
+        pub fn new(params: SearchParams) -> Option<Self> {
+            (params == SEARCH_PARAMS).then_some(Self)
+        }
+    }
+
+    impl Deref for SearchParamsProvider {
+        type Target = SearchParams;
+
+        fn deref(&self) -> &Self::Target {
+            &SEARCH_PARAMS
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct EvalParamsProvider;
+
+    impl EvalParamsProvider {
+        pub fn new(params: EvalParams) -> Option<Self> {
+            (params == EVAL_PARAMS).then_some(Self)
+        }
+    }
+
+    impl Deref for EvalParamsProvider {
+        type Target = EvalParams;
+
+        fn deref(&self) -> &Self::Target {
+            &EVAL_PARAMS
+        }
+    }
+}
 
 #[cfg(feature = "3")]
 mod inner {
