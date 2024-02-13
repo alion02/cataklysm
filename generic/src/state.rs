@@ -12,11 +12,12 @@ pub struct State {
     stones_left: Pair<u32>,
     caps_left: Pair<u32>,
 
-    ply: u32,
-    last_reversible: u32,
-
     nodes: u64,
     generation: u32,
+
+    half_komi: i32,
+    ply: u32,
+    last_reversible: u32,
 
     abort: Arc<AtomicBool>,
     abort_inactive: Arc<AtomicBool>,
@@ -37,10 +38,6 @@ pub struct State {
 
 impl State {
     pub fn new(opt: Options) -> Result<Self, NewGameError> {
-        if opt.half_komi != 0 {
-            return Err(NewGameError);
-        }
-
         if !opt.params.tt_size.is_power_of_two() {
             return Err(NewGameError);
         }
@@ -52,10 +49,11 @@ impl State {
             block: Pair::default(),
             stones_left: opt.start_stones,
             caps_left: opt.start_caps,
-            ply: 0,
-            last_reversible: 0,
             nodes: 0,
             generation: 0,
+            half_komi: opt.half_komi,
+            ply: 0,
+            last_reversible: 0,
             abort: Arc::new(AtomicBool::new(false)),
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
@@ -255,17 +253,19 @@ impl State {
             let total_dist = dist_horz + dist_vert;
             let smaller_dist = min(dist_horz, dist_vert);
 
-            let raw = self.count_flats(color) as i32 * self.eval.flat_count
-                + self.stones_left[color] as i32 * self.eval.stones_left
+            self.stones_left[color] as i32 * self.eval.stones_left
                 + self.caps_left[color] as i32 * self.eval.caps_left
                 + total_dist * self.eval.total_dist
-                + smaller_dist * self.eval.smallest_dist;
-
-            raw * 2
+                + smaller_dist * self.eval.smallest_dist
         };
 
         let color = self.active_color();
-        Eval::new(eval_half(color) - eval_half(!color) + self.eval.side_to_move)
+        let sides = eval_half(color) - eval_half(!color);
+        Eval::new(
+            sides * 2
+                + self.half_flat_count_diff() * color_mult(color) * self.eval.flat_count
+                + self.eval.side_to_move,
+        )
     }
 
     // Performance experiment: swap C and &mut Self.
@@ -640,12 +640,11 @@ impl State {
         if self.stones_left[!color] == 0 && self.caps_left[!color] == 0
             || self.road.white | self.road.black | self.block.white | self.block.black == BOARD
         {
-            let own = self.count_flats(color);
-            let opp = self.count_flats(!color);
+            let diff = self.half_flat_count_diff() * color_mult(color);
 
-            return if opp > own {
+            return if diff < 0 {
                 loss(state, self)
-            } else if own > opp {
+            } else if diff > 0 {
                 win(state, self)
             } else {
                 draw(state, self)
@@ -707,8 +706,10 @@ impl State {
     }
 
     #[inline]
-    fn count_flats(&self, color: bool) -> u32 {
-        (self.road[color] & !self.block[color]).count_ones()
+    fn half_flat_count_diff(&self) -> i32 {
+        (self.road.white & !self.block.white).count_ones() as i32 * 2
+            - (self.road.black & !self.block.black).count_ones() as i32 * 2
+            - self.half_komi
     }
 
     #[inline]

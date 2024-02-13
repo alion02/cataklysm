@@ -3,6 +3,8 @@ use core::{
     ops::{ControlFlow, Index, IndexMut},
 };
 
+use crate::pair::{BLACK, WHITE};
+
 pub trait ControlFlowIntoContinue<T> {
     fn into_continue(self) -> T;
 }
@@ -49,6 +51,13 @@ impl<T, const S: usize> IndexMut<u32> for WrappingArray<T, S> {
     #[inline]
     fn index_mut(&mut self, index: u32) -> &mut Self::Output {
         &mut self.0[index as usize % S]
+    }
+}
+
+pub fn color_mult(color: bool) -> i32 {
+    match color {
+        WHITE => 1,
+        BLACK => -1,
     }
 }
 
