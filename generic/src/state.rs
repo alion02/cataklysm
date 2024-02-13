@@ -263,7 +263,7 @@ impl State {
         let sides = eval_half(color) - eval_half(!color);
         Eval::new(
             sides * 2
-                + self.half_flat_count_diff() * color_mult(color) * self.eval.flat_count
+                + self.half_flat_count_diff() * sign(color) * self.eval.flat_count
                 + self.eval.side_to_move,
         )
     }
@@ -640,7 +640,7 @@ impl State {
         if self.stones_left[!color] == 0 && self.caps_left[!color] == 0
             || self.road.white | self.road.black | self.block.white | self.block.black == BOARD
         {
-            let diff = self.half_flat_count_diff() * color_mult(color);
+            let diff = self.half_flat_count_diff() * sign(color);
 
             return if diff < 0 {
                 loss(state, self)
