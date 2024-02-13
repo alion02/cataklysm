@@ -54,6 +54,7 @@ impl<T, const S: usize> IndexMut<u32> for WrappingArray<T, S> {
     }
 }
 
+#[inline]
 pub fn color_mult(color: bool) -> i32 {
     match color {
         WHITE => 1,
