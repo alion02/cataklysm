@@ -145,3 +145,37 @@ fn make_game(mut args: Args) -> Box<dyn Game> {
     );
     game
 }
+
+#[cfg(all(
+    target_arch = "x86_64",
+    not(target_feature = "avx2"),
+    not(feature = "allow-old-x86-64"),
+))]
+mod slow_error {
+    #[cfg(windows)]
+    compile_error!(
+        r#"cataklysm compiled for x86-64 without support for modern instructions is slow
+
+if this is not desired, set the RUSTFLAGS environment variable appropriately and re-run the build:
+    in command prompt: set RUSTFLAGS=-Ctarget-cpu=native
+    in powershell: $env:RUSTFLAGS=-Ctarget-cpu=native
+
+otherwise, or if the error persists, enable the feature "allow-old-x86-64" for the build, for example:
+    cargo b -r --features allow-old-x86-64
+
+"#
+    );
+
+    #[cfg(not(windows))]
+    compile_error!(
+        r#"cataklysm compiled for x86-64 without support for modern instructions is slow
+
+if this is not desired, re-run the build with the appropriate RUSTFLAGS environment variable, for example:
+    RUSTFLAGS=-Ctarget-cpu=native cargo b -r
+
+otherwise, or if the error persists, enable the feature "allow-old-x86-64" for the build, for example:
+    cargo b -r --features allow-old-x86-64
+
+"#
+    );
+}

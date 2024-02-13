@@ -26,6 +26,7 @@ all-sizes = ["3", "4", "5", "6", "7", "8"]
 6 = ["dep:size6"]
 7 = ["dep:size7"]
 8 = ["dep:size8"]
+allow-old-x86-64 = []
 
 [dependencies]
 tokio = { version = "1.35.1", features = [
