@@ -69,7 +69,7 @@ impl State {
         })
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval) -> Eval {
+    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval, allow_nmp: bool) -> Eval {
         self.nodes += 1;
         self.status(
             (),
@@ -113,6 +113,26 @@ impl State {
                             Action::PASS
                         };
 
+                        let nmp_factor = s.search.nmp_factor;
+                        if depth > nmp_factor
+                            && allow_nmp
+                            && nmp_factor != 0
+                            && s.eval() + 5 >= beta
+                        {
+                            // NMP conditions
+                            // - depth doesn't underflow
+                            // - parent allows (currently only in scout search)
+                            // - NMP enabled
+                            // - eval is high
+                            let score = -s.with(true, Action::PASS, |s| {
+                                s.search(depth - nmp_factor - 1, -beta, -beta + 1, false)
+                            });
+
+                            if score >= beta {
+                                return beta;
+                            }
+                        }
+
                         let mut allow_scout_window = false;
                         let mut f = |s: &mut Self, action| {
                             if s.abort.load(Relaxed) {
@@ -123,7 +143,7 @@ impl State {
                             'skip_full_window: {
                                 if allow_scout_window {
                                     score = -s.with(true, action, |s| {
-                                        s.search(depth - 1, -alpha - 1, -alpha)
+                                        s.search(depth - 1, -alpha - 1, -alpha, true)
                                     });
 
                                     if score <= alpha || score >= beta {
@@ -132,8 +152,9 @@ impl State {
                                 }
 
                                 allow_scout_window = s.search.use_pvs;
-                                score =
-                                    -s.with(true, action, |s| s.search(depth - 1, -beta, -alpha));
+                                score = -s.with(true, action, |s| {
+                                    s.search(depth - 1, -beta, -alpha, false)
+                                });
                             }
 
                             if score > best_score {
@@ -380,7 +401,10 @@ impl State {
 
         let r = action.branch(
             (&mut s, hash, f),
-            |(s, _, f)| f(s),
+            |(s, hash, f)| {
+                *s.hash_mut() = hash;
+                f(s)
+            },
             |(s, mut hash, f), sq, piece| {
                 let bit = sq.bit();
 
@@ -740,7 +764,7 @@ impl Game for State {
                         let alpha = expected_score - alpha_margin;
                         let beta = expected_score + beta_margin;
 
-                        let score = self.search(depth, alpha, beta);
+                        let score = self.search(depth, alpha, beta, false);
 
                         if score > alpha && score < beta {
                             break 'skip_full_window;
@@ -756,7 +780,7 @@ impl Game for State {
                 }
             }
 
-            self.search(depth, -Eval::DECISIVE, Eval::DECISIVE);
+            self.search(depth, -Eval::DECISIVE, Eval::DECISIVE, false);
         }
 
         self.generation += 1;
