@@ -117,7 +117,7 @@ impl State {
                         if depth > nmp_factor
                             && allow_nmp
                             && nmp_factor != 0
-                            && s.eval() + 5 >= beta
+                            && s.eval() + s.search.nmp_fudge + s.search.nmp_eval_margin >= beta
                         {
                             // NMP conditions
                             // - depth doesn't underflow
@@ -128,7 +128,7 @@ impl State {
                                 s.search(depth - nmp_factor - 1, -beta, -beta + 1, false)
                             });
 
-                            if score >= beta {
+                            if score + s.search.nmp_fudge >= beta {
                                 return beta;
                             }
                         }
