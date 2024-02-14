@@ -6,15 +6,21 @@ use common::{game::*, pair::Pair};
 use tokio::{
     io::{stdin, AsyncBufReadExt, BufReader},
     select,
-    sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+    sync::{
+        mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender},
+        oneshot::{channel, Receiver, Sender},
+    },
     time::{sleep, Duration, Instant, Sleep},
 };
 
 // FIXME
 const FOREVER: Duration = Duration::from_secs(60 * 60 * 24 * 365); // 1 year
-const ABORT_MARGIN: Duration = Duration::from_millis(20);
+
+const MAX_ABORT_LATENCY: Duration = Duration::from_millis(20);
+
+const MIN_DEPTH: u32 = 2;
 const MAX_DEPTH: u32 = 60;
-const IGNORE_ABORT_DEPTH: u32 = 2;
+
 const MIN_KOMI: i32 = -20;
 const MAX_KOMI: i32 = 20;
 
@@ -23,10 +29,17 @@ struct State {
     tx: UnboundedSender<Search>,
     history: Vec<String>, // TODO: Use Box<dyn Action>?
     game: Option<Box<dyn Game>>,
-    flag: Option<AbortFlag>,
+    flag: Option<(AbortFlag, Option<Sender<()>>)>,
     debug: bool,
     timeout: Pin<Box<Sleep>>,
     half_komi: i32,
+}
+
+struct Search {
+    game: Box<dyn Game>,
+    start: Instant,
+    time_target: Duration,
+    waiter: Receiver<()>,
 }
 
 impl State {
@@ -46,8 +59,11 @@ impl State {
     async fn abort(&mut self) {
         let start = Instant::now();
 
-        if let Some(flag) = self.flag.take() {
+        if let Some((flag, waker)) = self.flag.take() {
             flag.set();
+            if let Some(waker) = waker {
+                waker.send(()).unwrap();
+            }
 
             self.game = Some(self.rx.recv().await.unwrap());
 
@@ -124,16 +140,33 @@ impl State {
                 let mut time = Pair::default();
                 let mut increment = Pair::default();
 
+                let (waker, waiter) = channel();
+                let mut delay_bestmove = false;
+
                 while let Some(subcmd) = cmd.next() {
-                    let target = match subcmd {
-                        "wtime" => &mut time.white,
-                        "btime" => &mut time.black,
-                        "winc" => &mut increment.white,
-                        "binc" => &mut increment.black,
-                        _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
+                    let mut get_time =
+                        || Duration::from_millis(cmd.next().unwrap().parse().unwrap());
+
+                    let mut set_time = |time: &mut Duration| {
+                        *time = get_time();
+                        delay_bestmove = false;
                     };
 
-                    *target = Duration::from_millis(cmd.next().unwrap().parse().unwrap());
+                    match subcmd {
+                        "wtime" => set_time(&mut time.white),
+                        "btime" => set_time(&mut time.black),
+                        "winc" => set_time(&mut increment.white),
+                        "binc" => set_time(&mut increment.black),
+                        "movetime" => {
+                            time = Pair::both(get_time() + MAX_ABORT_LATENCY);
+                            increment = Pair::both(FOREVER);
+                        }
+                        "infinite" => {
+                            [time, increment] = [Pair::both(FOREVER); 2];
+                            delay_bestmove = true;
+                        }
+                        _ => panic!(r#"unsupported command "{line}" @ "{subcmd}""#),
+                    };
                 }
 
                 let color = game.active_color();
@@ -146,19 +179,28 @@ impl State {
                 let time_target = (time[color] + increment[color] * expected_moves_left)
                     / (expected_moves_left + 1);
 
-                self.flag = Some(game.abort_flag());
+                self.flag = Some((
+                    game.abort_flag(),
+                    if delay_bestmove {
+                        Some(waker)
+                    } else {
+                        waker.send(()).unwrap();
+                        None
+                    },
+                ));
                 game.clear_abort_flag();
                 self.tx
                     .send(Search {
                         game,
                         start,
                         time_target,
+                        waiter,
                     })
                     .unwrap();
 
                 self.timeout
                     .as_mut()
-                    .reset(start + time[color] - ABORT_MARGIN);
+                    .reset(start + time[color] - MAX_ABORT_LATENCY);
 
                 if self.debug {
                     println!("info string target time = {time_target:?}");
@@ -174,12 +216,6 @@ impl State {
 
         false
     }
-}
-
-struct Search {
-    game: Box<dyn Game>,
-    start: Instant,
-    time_target: Duration,
 }
 
 pub async fn run() {
@@ -201,6 +237,7 @@ pub async fn run() {
             mut game,
             start,
             time_target,
+            waiter,
         }) = rx.blocking_recv()
         {
             let mut action;
@@ -226,7 +263,7 @@ pub async fn run() {
                 );
 
                 // Restore the abort flag if we reach the target minimum depth
-                if d == IGNORE_ABORT_DEPTH {
+                if d == MIN_DEPTH {
                     game.swap_abort_flags();
                 }
 
@@ -257,6 +294,8 @@ pub async fn run() {
                     break;
                 }
             }
+
+            waiter.blocking_recv().unwrap();
 
             println!("bestmove {action}");
             tx.send(game).unwrap();
