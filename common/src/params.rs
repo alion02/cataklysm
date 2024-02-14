@@ -16,7 +16,7 @@ pub static SEARCH_PARAMS: SearchParams = SearchParams {
     aspiration_attempts: 0,
     use_pvs: true,
     nmp_factor: 2,
-    nmp_fudge: 10,
+    nmp_fudge: 5,
     nmp_eval_margin: 5,
     tt_size: 1 << 24,
 };
