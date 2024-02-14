@@ -147,10 +147,7 @@ impl State {
                     let mut get_time =
                         || Duration::from_millis(cmd.next().unwrap().parse().unwrap());
 
-                    let mut set_time = |time: &mut Duration| {
-                        *time = get_time();
-                        delay_bestmove = false;
-                    };
+                    let mut set_time = |time: &mut Duration| *time = get_time();
 
                     match subcmd {
                         "wtime" => set_time(&mut time.white),
