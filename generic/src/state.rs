@@ -3,33 +3,33 @@ use crate::*;
 #[repr(C)]
 #[derive(Debug)]
 pub struct State {
-    road: Pair<Bitboard>,
-    block: Pair<Bitboard>,
+    pub(crate) road: Pair<Bitboard>,
+    pub(crate) block: Pair<Bitboard>,
 
-    stones_left: Pair<u32>,
-    caps_left: Pair<u32>,
+    pub(crate) stones_left: Pair<u32>,
+    pub(crate) caps_left: Pair<u32>,
 
-    nodes: u64,
-    generation: u32,
+    pub(crate) nodes: u64,
+    pub(crate) generation: u32,
 
-    half_komi: i32,
-    ply: u32,
-    last_reversible: u32,
+    pub(crate) half_komi: i32,
+    pub(crate) ply: u32,
+    pub(crate) last_reversible: u32,
 
-    abort: Arc<AtomicBool>,
-    abort_inactive: Arc<AtomicBool>,
+    pub(crate) abort: Arc<AtomicBool>,
+    pub(crate) abort_inactive: Arc<AtomicBool>,
 
-    stacks: [Stack; ARR_LEN],
+    pub(crate) stacks: [Stack; ARR_LEN],
 
-    influence: Pair<Influence>,
+    pub(crate) influence: Pair<Influence>,
 
-    hashes: WrappingArray<Hash, MAX_DEPTH>,
-    killers: WrappingArray<Action, MAX_DEPTH>,
+    pub(crate) hashes: WrappingArray<Hash, MAX_DEPTH>,
+    pub(crate) killers: WrappingArray<Action, MAX_DEPTH>,
 
-    tt: Box<[TtBucket]>,
+    pub(crate) tt: Box<[TtBucket]>,
 
-    search: SearchParamsProvider,
-    eval: EvalParamsProvider,
+    pub(crate) search: SearchParamsProvider,
+    pub(crate) eval: EvalParamsProvider,
 }
 
 impl State {
@@ -65,7 +65,13 @@ impl State {
         })
     }
 
-    fn search(&mut self, depth: u32, mut alpha: Eval, mut beta: Eval, allow_nmp: bool) -> Eval {
+    pub(crate) fn search(
+        &mut self,
+        depth: u32,
+        mut alpha: Eval,
+        mut beta: Eval,
+        allow_nmp: bool,
+    ) -> Eval {
         self.nodes += 1;
         self.status(
             (),
@@ -225,7 +231,7 @@ impl State {
         )
     }
 
-    fn eval(&self) -> Eval {
+    pub(crate) fn eval(&self) -> Eval {
         let eval_half = |color| {
             let inf = self.influence[color];
             let (my_road, opp_road) = self.road.get(color);
@@ -287,7 +293,7 @@ impl State {
 
     // Performance experiment: swap C and &mut Self.
     // Results: insignificant, try again later.
-    fn for_actions<B, C>(
+    pub(crate) fn for_actions<B, C>(
         &mut self,
         mut acc: C,
         mut f: impl FnMut(C, &mut Self, Action) -> ControlFlow<B, C>,
@@ -383,7 +389,12 @@ impl State {
 
     // Performance experiment: remove undo option (always force undo).
     // Results: mixed.
-    fn with<R>(&mut self, undo: bool, action: Action, f: impl FnOnce(&mut Self) -> R) -> R {
+    pub(crate) fn with<R>(
+        &mut self,
+        undo: bool,
+        action: Action,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
         let mut s = self;
         let color = s.active_color() ^ s.is_opening();
 
@@ -577,7 +588,7 @@ impl State {
     }
 
     /// Assumes that there exists at least one [`State`] for which the [`Action`] is valid.
-    fn is_legal(&mut self, action: Action) -> bool {
+    pub(crate) fn is_legal(&mut self, action: Action) -> bool {
         let color = self.active_color();
         let opening = self.is_opening();
         let clever = action.branch(
@@ -639,7 +650,7 @@ impl State {
 
     // Performance experiment: swap S and &mut Self.
     // Results: insignificant, try again later.
-    fn status<S, R>(
+    pub(crate) fn status<S, R>(
         &mut self,
         state: S,
         ongoing: impl FnOnce(S, &mut Self) -> R,
@@ -674,7 +685,7 @@ impl State {
         ongoing(state, self)
     }
 
-    fn flood_distance(
+    pub(crate) fn flood_distance(
         &self,
         start: Bitboard,
         goal: Bitboard,
@@ -721,19 +732,19 @@ impl State {
     }
 
     #[inline]
-    fn has_road(&self, color: bool) -> bool {
+    pub(crate) fn has_road(&self, color: bool) -> bool {
         self.influence[color].intersections_of_opposites() & self.road[color] != 0
     }
 
     #[inline]
-    fn half_flat_count_diff(&self) -> i32 {
+    pub(crate) fn half_flat_count_diff(&self) -> i32 {
         (self.road.white & !self.block.white).count_ones() as i32 * 2
             - (self.road.black & !self.block.black).count_ones() as i32 * 2
             - self.half_komi
     }
 
     #[inline]
-    fn hash_mut(&mut self) -> &mut Hash {
+    pub(crate) fn hash_mut(&mut self) -> &mut Hash {
         &mut self.hashes[self.ply]
     }
 }
@@ -911,19 +922,15 @@ impl Game for State {
         Ok(())
     }
 
-    fn take_nodes(&mut self) -> u64 {
-        (self.nodes, self.nodes = 0).0
+    fn pv(&mut self) -> Box<dyn fmt::Display + '_> {
+        Box::new(Pv::new(self))
     }
 
-    fn curr_hash(&mut self) -> Hash {
-        *self.hash_mut()
-    }
-
-    fn abort_flag(&mut self) -> AbortFlag {
+    fn abort_flag(&self) -> AbortFlag {
         AbortFlag::new(&self.abort)
     }
 
-    fn clear_abort_flag(&mut self) -> bool {
+    fn clear_abort_flag(&self) -> bool {
         self.abort
             .compare_exchange(true, false, Relaxed, Relaxed)
             .is_ok()
@@ -931,6 +938,18 @@ impl Game for State {
 
     fn swap_abort_flags(&mut self) {
         core::mem::swap(&mut self.abort, &mut self.abort_inactive);
+    }
+
+    fn nodes(&self) -> u64 {
+        self.nodes
+    }
+
+    fn clear_nodes(&mut self) {
+        self.nodes = 0;
+    }
+
+    fn hash(&mut self) -> Hash {
+        *self.hash_mut()
     }
 
     fn stones_left(&self) -> Pair<u32> {

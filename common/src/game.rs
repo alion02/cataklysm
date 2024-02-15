@@ -164,11 +164,13 @@ pub trait Game: Send {
     fn parser(&mut self) -> fn(&str) -> Result<Box<dyn Move>, ParseMoveError>;
     fn play(&mut self, mv: Box<dyn Move>) -> Result<(), PlayMoveError>;
     fn set_position(&mut self, tps: &str) -> Result<(), SetPositionError>;
-    fn take_nodes(&mut self) -> u64;
-    fn curr_hash(&mut self) -> Hash;
-    fn abort_flag(&mut self) -> AbortFlag;
-    fn clear_abort_flag(&mut self) -> bool;
+    fn pv(&mut self) -> Box<dyn fmt::Display + '_>;
+    fn abort_flag(&self) -> AbortFlag;
+    fn clear_abort_flag(&self) -> bool;
     fn swap_abort_flags(&mut self);
+    fn nodes(&self) -> u64;
+    fn clear_nodes(&mut self);
+    fn hash(&mut self) -> Hash;
     fn stones_left(&self) -> Pair<u32>;
     fn caps_left(&self) -> Pair<u32>;
     fn active_color(&self) -> bool;

@@ -139,7 +139,7 @@ impl State {
                 let start = Instant::now();
 
                 self.abort().await;
-                let mut game = self.game.take().expect("can't start search");
+                let game = self.game.take().expect("can't start search");
 
                 let mut time = Pair::default();
                 let mut increment = Pair::default();
@@ -248,19 +248,24 @@ pub async fn run() {
             // Prevent reading the abort flag at the start
             game.swap_abort_flags();
 
+            game.clear_nodes();
+
             loop {
                 let eval;
                 (eval, action) = game.search(d);
 
                 let elapsed = start.elapsed();
+                let nodes = game.nodes();
 
                 // FIXME: Mate scores
                 println!(
-                    "info depth {} time {} pv {} score cp {}",
+                    "info depth {} time {} nodes {} nps {} score cp {} pv {}",
                     d,
                     elapsed.as_millis(),
-                    action,
+                    nodes,
+                    (nodes as f64 / elapsed.as_secs_f64()).round(),
                     eval.raw(),
+                    game.pv(),
                 );
 
                 // Restore the abort flag if we reach the target minimum depth
@@ -309,10 +314,6 @@ pub async fn run() {
         select! {
             biased;
 
-            game = state.rx.recv() => {
-                state.flag = None;
-                state.game = Some(game.unwrap());
-            }
             _ = state.timeout.as_mut() => state.abort().await,
             line = lines.next_line() => {
                 let line = line.unwrap().unwrap();

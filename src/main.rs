@@ -58,9 +58,10 @@ fn search(args: Args) {
     let mut game = make_game(args);
     for d in 1..30 {
         let time = Instant::now();
+        game.clear_nodes();
         let (eval, action) = game.search(d);
         let secs = time.elapsed().as_secs_f64();
-        let nodes = game.take_nodes();
+        let nodes = game.nodes();
         let nps = nodes as f64 / secs;
 
         println!(
@@ -109,7 +110,7 @@ fn hashtest(args: Args) {
     let mut game = make_game(args);
     let mut stdin = stdin().lines().map(|l| l.unwrap());
     loop {
-        println!("{:?}", game.curr_hash());
+        println!("{:?}", game.hash());
 
         let Ok(action) = game.parser()(&stdin.next().unwrap()) else {
             println!("could not parse action");
