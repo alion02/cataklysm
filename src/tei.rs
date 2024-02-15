@@ -19,7 +19,11 @@ const FOREVER: Duration = Duration::from_secs(60 * 60 * 24 * 365); // 1 year
 const MAX_ABORT_LATENCY: Duration = Duration::from_millis(20);
 
 const MIN_DEPTH: u32 = 2;
-const MAX_DEPTH: u32 = 60;
+const MAX_DEPTH: u32 = {
+    let max = 60;
+    assert!(max < common::state::MAX_DEPTH as _);
+    max
+};
 
 const MIN_KOMI: i32 = -20;
 const MAX_KOMI: i32 = 20;

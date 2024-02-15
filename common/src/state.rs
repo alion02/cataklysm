@@ -1,5 +1,7 @@
 use core::{fmt, mem::transmute, ops::Neg};
 
+pub const MAX_DEPTH: usize = 64;
+
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Piece {

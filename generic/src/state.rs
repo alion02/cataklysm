@@ -1,8 +1,5 @@
 use crate::*;
 
-const HASH_LEN: usize = 64;
-const KILLER_LEN: usize = 32;
-
 #[repr(C)]
 #[derive(Debug)]
 pub struct State {
@@ -26,9 +23,8 @@ pub struct State {
 
     influence: Pair<Influence>,
 
-    hashes: WrappingArray<Hash, HASH_LEN>,
-
-    killers: WrappingArray<Action, KILLER_LEN>,
+    hashes: WrappingArray<Hash, MAX_DEPTH>,
+    killers: WrappingArray<Action, MAX_DEPTH>,
 
     tt: Box<[TtBucket]>,
 
@@ -58,8 +54,8 @@ impl State {
             abort_inactive: Arc::new(AtomicBool::new(false)),
             stacks: [Stack::EMPTY; ARR_LEN],
             influence: Pair::both(Influence::EDGES),
-            hashes: WrappingArray([Hash::ZERO; HASH_LEN]),
-            killers: WrappingArray(Default::default()),
+            hashes: WrappingArray([Hash::ZERO; MAX_DEPTH]),
+            killers: WrappingArray([Action::PASS; MAX_DEPTH]),
             tt: core::iter::repeat(TtBucket::default())
                 .take(opt.params.tt_size)
                 .collect::<Vec<_>>()
@@ -745,6 +741,7 @@ impl State {
 impl Game for State {
     fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>) {
         assert!(depth > 0);
+        assert!(depth < MAX_DEPTH as _);
 
         let (idx, sig) = self.hash_mut().split(self.tt.len());
 
