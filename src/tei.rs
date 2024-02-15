@@ -250,7 +250,12 @@ pub async fn run() {
 
             game.clear_nodes();
 
-            (eval, action) = game.search(d).unwrap();
+            loop {
+                if let Some(r) = game.search(d) {
+                    (eval, action) = r;
+                    break;
+                }
+            }
 
             loop {
                 let elapsed = start.elapsed();
