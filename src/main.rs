@@ -59,7 +59,7 @@ fn search(args: Args) {
     for d in 1..30 {
         let time = Instant::now();
         game.clear_nodes();
-        let (eval, action) = game.search(d);
+        let (eval, action) = game.search(d).unwrap();
         let secs = time.elapsed().as_secs_f64();
         let nodes = game.nodes();
         let nps = nodes as f64 / secs;
@@ -83,7 +83,7 @@ fn showmatch(args: Args) {
         let mut d = 1;
         loop {
             let eval;
-            (eval, action) = game.search(d);
+            (eval, action) = game.search(d).unwrap();
 
             if eval.is_decisive() {
                 break;

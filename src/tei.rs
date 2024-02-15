@@ -241,6 +241,7 @@ pub async fn run() {
             waiter,
         }) = rx.blocking_recv()
         {
+            let mut eval;
             let mut action;
             let mut depth_times = [0.0f64; 3];
             let mut d = 1;
@@ -250,10 +251,9 @@ pub async fn run() {
 
             game.clear_nodes();
 
-            loop {
-                let eval;
-                (eval, action) = game.search(d);
+            (eval, action) = game.search(d).unwrap();
 
+            loop {
                 let elapsed = start.elapsed();
                 let nodes = game.nodes();
 
@@ -298,6 +298,10 @@ pub async fn run() {
 
                 if d > MAX_DEPTH {
                     break;
+                }
+
+                if let Some(r) = game.search(d) {
+                    (eval, action) = r;
                 }
             }
 

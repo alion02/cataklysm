@@ -159,7 +159,7 @@ impl AbortFlag {
 }
 
 pub trait Game: Send {
-    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>);
+    fn search(&mut self, depth: u32) -> Option<(Eval, Box<dyn Move>)>;
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64;
     fn parser(&mut self) -> fn(&str) -> Result<Box<dyn Move>, ParseMoveError>;
     fn play(&mut self, mv: Box<dyn Move>) -> Result<(), PlayMoveError>;

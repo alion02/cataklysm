@@ -750,7 +750,7 @@ impl State {
 }
 
 impl Game for State {
-    fn search(&mut self, depth: u32) -> (Eval, Box<dyn Move>) {
+    fn search(&mut self, depth: u32) -> Option<(Eval, Box<dyn Move>)> {
         assert!(depth > 0);
         assert!(depth < MAX_DEPTH as _);
 
@@ -793,8 +793,9 @@ impl Game for State {
 
         self.generation += 1;
 
-        let entry = self.tt[idx].entry(sig).unwrap();
-        (entry.score, Box::new(entry.action))
+        self.tt[idx]
+            .entry(sig)
+            .map(|entry| (entry.score, Box::new(entry.action) as Box<dyn Move>))
     }
 
     fn perft(&mut self, depth: u32, mode: PerftMode) -> u64 {
