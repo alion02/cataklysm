@@ -767,7 +767,6 @@ impl Game for State {
                     let mut alpha_margin = self.search.aspiration_window;
                     let mut beta_margin = self.search.aspiration_window;
 
-                    #[allow(clippy::reversed_empty_ranges)]
                     for _ in 0..self.search.aspiration_attempts {
                         let alpha = expected_score - alpha_margin;
                         let beta = expected_score + beta_margin;
