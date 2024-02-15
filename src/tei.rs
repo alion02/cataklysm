@@ -122,8 +122,7 @@ impl State {
                 assert!(
                     self.history
                         .iter()
-                        .zip(cmd.by_ref())
-                        .all(|(curr, new)| curr == new),
+                        .all(|curr| Some(curr.as_str()) == cmd.next()),
                     "undo not yet supported",
                 );
 
