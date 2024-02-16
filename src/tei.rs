@@ -248,12 +248,20 @@ pub async fn run() {
             // Prevent reading the abort flag at the start
             game.swap_abort_flags();
 
+            // Clear the inactive abort flag in case it is set from the previous search loop
+            game.clear_abort_flag();
             game.clear_nodes();
 
+            let mut i = 0;
             loop {
                 if let Some(r) = game.search(d) {
                     (eval, action) = r;
                     break;
+                }
+
+                i += 1;
+                if i == 128 {
+                    panic!("failed to get a tt entry 128 times");
                 }
             }
 
@@ -322,6 +330,13 @@ pub async fn run() {
         select! {
             biased;
 
+            game = state.rx.recv() => {
+                // Eagerly consume the search thread message instead of waiting
+                // for a TEI command to come and initiate an abort.
+                // Useful for not stalling forever if the search thread dies.
+                state.flag = None;
+                state.game = Some(game.unwrap());
+            }
             _ = state.timeout.as_mut() => state.abort().await,
             line = lines.next_line() => {
                 let line = line.unwrap().unwrap();
