@@ -2,6 +2,8 @@ use crate::*;
 
 use core::ops::{Index, IndexMut};
 
+// TODO: Investigate codegen of indexing etc.
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Pair<T> {
