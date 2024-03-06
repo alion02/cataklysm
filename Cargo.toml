@@ -1,12 +1,12 @@
 [workspace]
 members = [
+	"common",
 	"generic/size3",
 	"generic/size4",
 	"generic/size5",
 	"generic/size6",
 	"generic/size7",
 	"generic/size8",
-	"common",
 ]
 
 [package]
@@ -18,8 +18,8 @@ edition = "2021"
 
 [features]
 default = ["all-sizes"]
-common-sizes = ["5", "6"]
 all-sizes = ["3", "4", "5", "6", "7", "8"]
+common-sizes = ["5", "6"]
 3 = ["dep:size3"]
 4 = ["dep:size4"]
 5 = ["dep:size5"]
@@ -29,14 +29,6 @@ all-sizes = ["3", "4", "5", "6", "7", "8"]
 allow-old-x86-64 = []
 
 [dependencies]
-tokio = { version = "1.35.1", features = [
-	"rt",
-	"io-std",
-	"io-util",
-	"sync",
-	"macros",
-	"time",
-] }
 common = { path = "common" }
 size3 = { path = "generic/size3", optional = true }
 size4 = { path = "generic/size4", optional = true }
@@ -44,9 +36,6 @@ size5 = { path = "generic/size5", optional = true }
 size6 = { path = "generic/size6", optional = true }
 size7 = { path = "generic/size7", optional = true }
 size8 = { path = "generic/size8", optional = true }
-
-[dev-dependencies]
-rstest = "0.18.2"
 
 [profile.release]
 codegen-units = 1

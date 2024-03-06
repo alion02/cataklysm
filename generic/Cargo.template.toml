@@ -1,5 +1,5 @@
 [package]
-name = "size6"
+name = "size_SIZE"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,8 +9,8 @@ edition = "2021"
 path = "../src/lib.rs"
 
 [features]
-default = ["6"]
-6 = []
+default = ["_SIZE"]
+_SIZE = []
 
 [dependencies]
 common = { path = "../../common" }
