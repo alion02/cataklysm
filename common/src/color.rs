@@ -1,3 +1,5 @@
+use crate::*;
+
 use core::{mem::transmute, ops::Not};
 
 #[repr(u32)]
@@ -15,8 +17,8 @@ impl Color {
         // 1 - self as i32 * 2
 
         match self {
-            Color::White => 1,
-            Color::Black => -1,
+            White => 1,
+            Black => -1,
         }
     }
 }
@@ -29,8 +31,8 @@ impl Not for Color {
     fn not(self) -> Self {
         // TODO: Investigate optimization quality
         // match self {
-        // 	Color::White => Color::Black,
-        // 	Color::Black => Color::White,
+        // 	White => Black,
+        // 	Black => White,
         // }
 
         unsafe { transmute(self as u32 ^ 1) }
