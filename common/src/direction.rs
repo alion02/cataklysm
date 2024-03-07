@@ -2,7 +2,7 @@ use crate::*;
 
 use core::{fmt, mem::transmute, ops::Neg};
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     Right,
     Up,
