@@ -7,5 +7,8 @@ extern crate alloc;
 
 pub mod color;
 pub mod pair;
+pub mod piece;
 
-use color::{Color::*, *};
+pub use color::{Color::*, *};
+pub use pair::*;
+pub use piece::{Piece::*, *};
