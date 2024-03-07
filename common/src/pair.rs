@@ -2,8 +2,6 @@ use crate::*;
 
 use core::ops::{Index, IndexMut};
 
-// TODO: Investigate codegen of indexing etc.
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Pair<T> {
@@ -18,26 +16,26 @@ impl<T> Pair<T> {
     }
 
     #[inline]
-    pub fn get(self, color: Color) -> (T, T) {
+    pub fn get(self, color: Color) -> [T; 2] {
         match color {
-            White => (self.white, self.black),
-            Black => (self.black, self.white),
+            White => [self.white, self.black],
+            Black => [self.black, self.white],
         }
     }
 
     #[inline]
-    pub fn get_ref(&self, color: Color) -> (&T, &T) {
+    pub fn get_ref(&self, color: Color) -> [&T; 2] {
         match color {
-            White => (&self.white, &self.black),
-            Black => (&self.black, &self.white),
+            White => [&self.white, &self.black],
+            Black => [&self.black, &self.white],
         }
     }
 
     #[inline]
-    pub fn get_mut(&mut self, color: Color) -> (&mut T, &mut T) {
+    pub fn get_mut(&mut self, color: Color) -> [&mut T; 2] {
         match color {
-            White => (&mut self.white, &mut self.black),
-            Black => (&mut self.black, &mut self.white),
+            White => [&mut self.white, &mut self.black],
+            Black => [&mut self.black, &mut self.white],
         }
     }
 }
@@ -57,6 +55,9 @@ impl<T> Index<Color> for Pair<T> {
 
     #[inline]
     fn index(&self, index: Color) -> &T {
+        // TODO: More logical LLVM IR (and better codegen) in isolation, but needs analysis in a broader context, such as movegen
+        // unsafe { &*(self as *const _ as *const T).add(index as usize) }
+
         match index {
             White => &self.white,
             Black => &self.black,

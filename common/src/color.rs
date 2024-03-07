@@ -1,8 +1,7 @@
 use crate::*;
 
-use core::{mem::transmute, ops::Not};
+use core::ops::Not;
 
-#[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     White = 0,
@@ -13,9 +12,6 @@ impl Color {
     #[no_mangle]
     #[inline]
     pub fn sign(self) -> i32 {
-        // Better standalone, but optimizes worse when used with multiplication (common use case):
-        // 1 - self as i32 * 2
-
         match self {
             White => 1,
             Black => -1,
@@ -29,12 +25,9 @@ impl Not for Color {
     #[no_mangle]
     #[inline]
     fn not(self) -> Self {
-        // TODO: Investigate optimization quality
-        // match self {
-        // 	White => Black,
-        // 	Black => White,
-        // }
-
-        unsafe { transmute(self as u32 ^ 1) }
+        match self {
+            White => Black,
+            Black => White,
+        }
     }
 }
