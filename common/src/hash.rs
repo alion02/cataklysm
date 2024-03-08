@@ -5,6 +5,8 @@ use rand::{distributions::Standard, prelude::*};
 // Symmetry-supporting hashes considered but ultimately rejected due to their tendency to infect
 // other parts of the codebase, implementation complexity, and lack of general usefulness.
 
+pub const DEFAULT_SEED: u64 = cfg!(feature = "alt-seed") as u64;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Hash(u64);
 

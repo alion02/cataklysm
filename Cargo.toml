@@ -1,12 +1,12 @@
 [workspace]
 members = [
 	"common",
-	"generic/size3",
-	"generic/size4",
-	"generic/size5",
-	"generic/size6",
-	"generic/size7",
-	"generic/size8",
+	"generic/crates/size3",
+	"generic/crates/size4",
+	"generic/crates/size5",
+	"generic/crates/size6",
+	"generic/crates/size7",
+	"generic/crates/size8",
 ]
 
 [package]
@@ -18,6 +18,7 @@ edition = "2021"
 
 [features]
 default = ["all-sizes"]
+
 all-sizes = ["3", "4", "5", "6", "7", "8"]
 common-sizes = ["5", "6"]
 3 = ["dep:size3"]
@@ -26,16 +27,19 @@ common-sizes = ["5", "6"]
 6 = ["dep:size6"]
 7 = ["dep:size7"]
 8 = ["dep:size8"]
+
+alt-seed = ["common/alt-seed"]
+
 allow-old-x86-64 = []
 
 [dependencies]
 common = { path = "common" }
-size3 = { path = "generic/size3", optional = true }
-size4 = { path = "generic/size4", optional = true }
-size5 = { path = "generic/size5", optional = true }
-size6 = { path = "generic/size6", optional = true }
-size7 = { path = "generic/size7", optional = true }
-size8 = { path = "generic/size8", optional = true }
+size3 = { path = "generic/crates/size3", optional = true }
+size4 = { path = "generic/crates/size4", optional = true }
+size5 = { path = "generic/crates/size5", optional = true }
+size6 = { path = "generic/crates/size6", optional = true }
+size7 = { path = "generic/crates/size7", optional = true }
+size8 = { path = "generic/crates/size8", optional = true }
 
 [profile.release]
 codegen-units = 1
