@@ -1,6 +1,9 @@
 use crate::*;
 
-use core::ops::{Index, IndexMut};
+use core::{
+    mem::transmute,
+    ops::{Index, IndexMut},
+};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -14,30 +17,6 @@ impl<T> Pair<T> {
     pub fn new(white: T, black: T) -> Self {
         Self { white, black }
     }
-
-    #[inline]
-    pub fn get(self, color: Color) -> [T; 2] {
-        match color {
-            White => [self.white, self.black],
-            Black => [self.black, self.white],
-        }
-    }
-
-    #[inline]
-    pub fn get_ref(&self, color: Color) -> [&T; 2] {
-        match color {
-            White => [&self.white, &self.black],
-            Black => [&self.black, &self.white],
-        }
-    }
-
-    #[inline]
-    pub fn get_mut(&mut self, color: Color) -> [&mut T; 2] {
-        match color {
-            White => [&mut self.white, &mut self.black],
-            Black => [&mut self.black, &mut self.white],
-        }
-    }
 }
 
 impl<T: Copy> Pair<T> {
@@ -50,27 +29,18 @@ impl<T: Copy> Pair<T> {
     }
 }
 
-impl<T> Index<Color> for Pair<T> {
+impl<T> Index<bool> for Pair<T> {
     type Output = T;
 
     #[inline]
-    fn index(&self, index: Color) -> &T {
-        // TODO: More logical LLVM IR (and better codegen) in isolation, but needs analysis in a broader context, such as movegen
-        // unsafe { &*(self as *const _ as *const T).add(index as usize) }
-
-        match index {
-            White => &self.white,
-            Black => &self.black,
-        }
+    fn index(&self, index: bool) -> &T {
+        unsafe { &transmute::<_, &[T; 2]>(self)[index as usize] }
     }
 }
 
-impl<T> IndexMut<Color> for Pair<T> {
+impl<T> IndexMut<bool> for Pair<T> {
     #[inline]
-    fn index_mut(&mut self, index: Color) -> &mut T {
-        match index {
-            White => &mut self.white,
-            Black => &mut self.black,
-        }
+    fn index_mut(&mut self, index: bool) -> &mut T {
+        unsafe { &mut transmute::<_, &mut [T; 2]>(self)[index as usize] }
     }
 }

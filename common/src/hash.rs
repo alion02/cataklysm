@@ -18,19 +18,19 @@ impl Hash {
         0xf812ec2e34a9c388u64
     });
 
-    /// # Panics
-    ///
-    /// The method may panic if the `len` provided is zero, not a power of two, or too large.
-    #[no_mangle]
-    #[inline]
-    pub fn split(self, len: usize) -> SplitHash {
-        debug_assert!(len.is_power_of_two());
-        debug_assert!(len.trailing_zeros() <= u32::BITS);
-        SplitHash {
-            idx: self.0 as u32 & (len - 1) as u32,
-            sig: (self.0 >> 32) as u32,
-        }
-    }
+    // /// # Panics
+    // ///
+    // /// The method may panic if the `len` provided is zero, not a power of two, or too large.
+    // #[no_mangle]
+    // #[inline]
+    // pub fn split(self, len: usize) -> SplitHash {
+    //     debug_assert!(len.is_power_of_two());
+    //     debug_assert!(len.trailing_zeros() <= u32::BITS);
+    //     SplitHash {
+    //         idx: self.0 as u32 & (len - 1) as u32,
+    //         sig: (self.0 >> 32) as u32,
+    //     }
+    // }
 }
 
 impl BitXor for Hash {
@@ -49,11 +49,11 @@ impl BitXorAssign for Hash {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct SplitHash {
-    pub idx: u32,
-    pub sig: u32,
-}
+// #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+// pub struct SplitHash {
+//     pub idx: u32,
+//     pub sig: u32,
+// }
 
 impl Distribution<Hash> for Standard {
     #[inline]
