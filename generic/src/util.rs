@@ -1,6 +1,6 @@
 use crate::*;
 
-pub trait BitboardExt {
+pub trait Bitboard {
     /// Returns a bitboard containing the neighbors of set tiles. This doesn't necessarily include
     /// all the original tiles -- see [`Neighbors::or_neighbors`] if that is desired. The returned
     /// bitboard may have bits spuriously set outside the [`BOARD`].
@@ -15,7 +15,7 @@ pub trait BitboardExt {
     fn expand(&mut self, mask: Self);
 }
 
-impl BitboardExt for Bb {
+impl Bitboard for Bb {
     #[inline]
     fn neighbors(self) -> Self {
         if PADDING > 0 {
@@ -36,7 +36,7 @@ impl BitboardExt for Bb {
     }
 }
 
-impl<const N: usize> BitboardExt for Simd<Bb, N>
+impl<const N: usize> Bitboard for Simd<Bb, N>
 where
     LaneCount<N>: SupportedLaneCount,
 {
