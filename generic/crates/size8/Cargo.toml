@@ -11,7 +11,6 @@ path = "../../src/lib.rs"
 [features]
 default = ["8"]
 8 = []
-eventlog = []
 
 [dependencies]
 common = { path = "../../../common" }

@@ -1,4 +1,4 @@
 pub union Out<T: Copy> {
-    uninit: (),
+    _uninit: (),
     pub val: T,
 }
