@@ -61,7 +61,13 @@ const BOARD: Bb = ROW * COL;
 const STACK_CAP: usize = Stack::BITS as usize - 1;
 
 const TAG_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
+const ROAD_TAG_OFFSET: u32 = TAG_OFFSET;
+const NOBLE_TAG_OFFSET: u32 = TAG_OFFSET + 1;
 const PAT_OFFSET: u32 = TAG_OFFSET + 2;
+
+const FLAT_TAG: u16 = 1;
+const WALL_TAG: u16 = 2;
+const CAP_TAG: u16 = 3;
 
 const HASH_SIDE_TO_MOVE: u64 = 0xf812ec2e34a9c388u64; // TODO: alt-seed
 

@@ -14,7 +14,7 @@ impl<'a> State<'a> {
                 // Assume actions are not generated on completed games.
                 loop {
                     log!(self, $e);
-                    acc = f(self.lend(), acc, left.trailing_zeros() as u16 | $pc << 6)?;
+                    acc = f(self.lend(), acc, left.trailing_zeros() as u16 | $pc << TAG_OFFSET)?;
                     left &= left - 1;
                     if left == 0 {
                         break;
@@ -26,7 +26,7 @@ impl<'a> State<'a> {
         // Only do stone placements if we have any stones in reserve. We're technically checking
         // the wrong reserves on the first move because we assume this passes anyway.
         if self.update.stones_left[self.player()] > 0 {
-            for_placements!(1, GenPlaceFlat);
+            for_placements!(FLAT_TAG, GenPlaceFlat);
 
             // If it's the first move, skip over all the other kinds of actions. This check gets
             // skipped if we don't have stones, but we again don't care.
@@ -34,11 +34,11 @@ impl<'a> State<'a> {
                 return Continue(acc);
             }
 
-            for_placements!(2, GenPlaceWall);
+            for_placements!(WALL_TAG, GenPlaceWall);
         }
 
         if self.update.caps_left[self.player()] > 0 {
-            for_placements!(3, GenPlaceCap);
+            for_placements!(CAP_TAG, GenPlaceCap);
         }
 
         Continue(acc)
@@ -67,9 +67,9 @@ impl<'a> State<'a> {
             // TODO: Prefetch
 
             log!(self, match action >> TAG_OFFSET {
-                1 => MakePlaceFlat,
-                2 => MakePlaceWall,
-                3 => MakePlaceCap,
+                FLAT_TAG => MakePlaceFlat,
+                WALL_TAG => MakePlaceWall,
+                CAP_TAG => MakePlaceCap,
                 _ => unreachable!(),
             });
 
@@ -79,7 +79,7 @@ impl<'a> State<'a> {
             unmake.val.influence = *inf;
 
             // Remove the appropriate piece from the reserves.
-            let pieces_left_ref = &mut (if action >= 3 << TAG_OFFSET {
+            let pieces_left_ref = &mut (if action >= CAP_TAG << TAG_OFFSET {
                 &mut self.update.caps_left
             } else {
                 &mut self.update.stones_left
@@ -87,14 +87,14 @@ impl<'a> State<'a> {
             *pieces_left_ref -= 1;
             unmake.val.kind.place.pieces_left_ptr = (pieces_left_ref as *mut u8).addr();
 
-            let road_bit = (action as Bb >> TAG_OFFSET & 1) << sq;
+            let road_bit = (action as Bb >> ROAD_TAG_OFFSET & 1) << sq;
             let simd_road_bit = Simd::splat(road_bit);
             let adjacent = *inf & simd_road_bit;
 
             // Set the road and noble bits, if appropriate piece.
             let new_road = self.copy.road ^ road_bit;
             new.val.road = new_road;
-            new.val.noble = self.copy.noble ^ (action as Bb >> TAG_OFFSET + 1 & 1) << sq;
+            new.val.noble = self.copy.noble ^ (action as Bb >> NOBLE_TAG_OFFSET & 1) << sq;
 
             // Clear and set the owner.
             let new_owner = self.copy.owner & !(1 << sq) | (player as Bb) << sq;
