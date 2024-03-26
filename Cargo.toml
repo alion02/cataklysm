@@ -28,8 +28,6 @@ common-sizes = ["5", "6"]
 7 = ["dep:size7"]
 8 = ["dep:size8"]
 
-alt-seed = ["common/alt-seed"]
-
 allow-old-x86-64 = []
 
 [dependencies]

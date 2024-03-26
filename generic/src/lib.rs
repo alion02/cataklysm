@@ -58,6 +58,9 @@ const BOARD: Bb = ROW * COL;
 
 const STACK_CAP: usize = Stack::BITS as usize - 1;
 
+const TAG_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
+const PAT_OFFSET: u32 = TAG_OFFSET + 2;
+
 const HASH_SIDE_TO_MOVE: u64 = 0xf812ec2e34a9c388u64; // TODO: alt-seed
 
 #[allow(clippy::declare_interior_mutable_const)]
@@ -122,8 +125,8 @@ struct UnmakeSpread {}
 
 #[macro_export]
 macro_rules! log {
-    ($s:ident, $c:expr, $e:expr) => {
-        if $s.update.log.should_log() {
+    ($s:ident, $e:expr, $w:expr, $c:expr) => {
+        if $s.update.log.try_log($w) {
             if $c {
                 $s.update.log.log(Event {
                     ply: $s.copy.ply,
@@ -134,8 +137,20 @@ macro_rules! log {
     };
 
     ($s:ident, $e:expr) => {
-        log!($s, true, $e)
+        log!($s, $e, 1, true)
     };
+}
+
+#[inline]
+fn sq(action: u16) -> u16 {
+    let r = action & (1 << TAG_OFFSET) - 1;
+    debug_assert_ne!(BOARD & 1 << r, 0);
+    r
+}
+
+#[inline]
+fn pat(action: u16) -> u16 {
+    action >> PAT_OFFSET
 }
 
 impl<'a> State<'a> {

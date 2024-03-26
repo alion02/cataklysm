@@ -7,7 +7,7 @@ mod inner {
     use rand_distr::{Distribution, Geometric};
 
     pub struct EventLog {
-        skip: u32,
+        skip: i32,
         inner: Box<EventLogInner>,
     }
 
@@ -19,16 +19,19 @@ mod inner {
 
     impl EventLog {
         #[inline]
-        pub fn should_log(&mut self) -> bool {
-            self.skip -= 1;
-            self.skip == 0
+        pub fn try_log(&mut self, weight: i32) -> bool {
+            self.skip -= weight;
+            self.skip < 0
         }
 
         #[cold]
         #[inline(never)]
         pub fn log(&mut self, event: Event) {
-            *self.inner.events.entry(event).or_default() += 1;
-            self.skip = self.inner.dist.sample(&mut self.inner.rng) as u32 + 1;
+            let entry = self.inner.events.entry(event).or_default();
+            while self.skip < 0 {
+                *entry += 1;
+                self.skip += self.inner.dist.sample(&mut self.inner.rng) as i32 + 1;
+            }
         }
     }
 }
@@ -59,6 +62,9 @@ pub struct Event {
 
 #[derive(Hash, PartialEq, Eq)]
 pub enum EventKind {
+    GenPlaceFlat,
+    GenPlaceWall,
+    GenPlaceCap,
     MakePlaceFlat,
     MakePlaceWall,
     MakePlaceCap,

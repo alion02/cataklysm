@@ -9,10 +9,11 @@ impl<'a> State<'a> {
     ) -> ControlFlow<B, C> {
         let empty = self.piece() ^ BOARD;
         macro_rules! for_placements {
-            ($pc:expr) => {
+            ($pc:expr, $e:expr) => {
                 let mut left = empty;
                 // Assume actions are not generated on completed games.
                 loop {
+                    log!(self, $e);
                     acc = f(self.lend(), acc, left.trailing_zeros() as u16 | $pc << 6)?;
                     left &= left - 1;
                     if left == 0 {
@@ -25,7 +26,7 @@ impl<'a> State<'a> {
         // Only do stone placements if we have any stones in reserve. We're technically checking
         // the wrong reserves on the first move because we assume this passes anyway.
         if self.update.stones_left[self.player()] > 0 {
-            for_placements!(1);
+            for_placements!(1, GenPlaceFlat);
 
             // If it's the first move, skip over all the other kinds of actions. This check gets
             // skipped if we don't have stones, but we again don't care.
@@ -33,13 +34,11 @@ impl<'a> State<'a> {
                 return Continue(acc);
             }
 
-            // Wall placements.
-            for_placements!(2);
+            for_placements!(2, GenPlaceWall);
         }
 
         if self.update.caps_left[self.player()] > 0 {
-            // Cap placements.
-            for_placements!(3);
+            for_placements!(3, GenPlaceCap);
         }
 
         Continue(acc)
@@ -54,14 +53,15 @@ impl<'a> State<'a> {
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
 
         let player = self.player();
-        let pat = action >> 8;
-        let sq = action & 0x3f;
+        let pat = pat(action);
+        let sq = sq(action);
         if pat == 0 {
             hash ^= HASH_PC_SQ[action as usize].load(Relaxed);
             hash ^= HASH_STACK[0].load(Relaxed); // TODO
-            self.update.hashes[new_ply] = hash; // TODO: Prefetch
+            self.update.hashes[new_ply] = hash;
+            // TODO: Prefetch
 
-            log!(self, match action >> 6 {
+            log!(self, match action >> TAG_OFFSET {
                 1 => MakePlaceFlat,
                 2 => MakePlaceWall,
                 3 => MakePlaceCap,
@@ -72,11 +72,11 @@ impl<'a> State<'a> {
             let player = player ^ (self.copy.ply < 2); // Strange codegen. AND with 1 thrice.
             let inf = &mut self.update.influence.pair_mut()[player];
 
-            // Unconditionally store. Not worth checking if it needs unmaking.
+            // Unconditionally store. TODO: Is it worth checking if it needs unmaking?
             unmake.val.influence = *inf;
 
             // Remove the appropriate piece from the reserves.
-            let pieces_left_ref = &mut (if action >= 3 << 6 {
+            let pieces_left_ref = &mut (if action >= 3 << TAG_OFFSET {
                 &mut self.update.caps_left
             } else {
                 &mut self.update.stones_left
@@ -84,14 +84,14 @@ impl<'a> State<'a> {
             *pieces_left_ref -= 1;
             unmake.val.kind.place.pieces_left_ptr = (pieces_left_ref as *mut u8).addr();
 
-            let road_bit = (action as Bb >> 6 & 1) << sq;
+            let road_bit = (action as Bb >> TAG_OFFSET & 1) << sq;
             let simd_road_bit = Simd::splat(road_bit);
             let adjacent = *inf & simd_road_bit;
 
             // Set the road and noble bits, if appropriate piece.
             let new_road = self.copy.road ^ road_bit;
             new.val.road = new_road;
-            new.val.noble = self.copy.noble ^ (action as Bb >> 7 & 1) << sq;
+            new.val.noble = self.copy.noble ^ (action as Bb >> TAG_OFFSET + 1 & 1) << sq;
 
             // Clear and set the owner.
             let new_owner = self.copy.owner & !(1 << sq) | (player as Bb) << sq;
