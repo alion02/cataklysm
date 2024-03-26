@@ -1,10 +1,12 @@
 #[cfg(feature = "event-log")]
 mod inner {
-    use crate::Event;
     use alloc::boxed::Box;
+
     use hashbrown::HashMap;
     use rand_chacha::ChaCha20Rng;
     use rand_distr::{Distribution, Geometric};
+
+    use crate::Event;
 
     pub struct EventLog {
         skip: i32,

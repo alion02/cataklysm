@@ -1,6 +1,6 @@
-use crate::*;
-
 use core::{fmt, mem::transmute, ops::Neg};
+
+use crate::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {

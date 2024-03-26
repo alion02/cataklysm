@@ -1,6 +1,6 @@
-use crate::*;
-
 use core::ops::Not;
+
+use crate::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {

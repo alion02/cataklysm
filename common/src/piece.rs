@@ -1,6 +1,6 @@
-use crate::*;
-
 use core::fmt;
+
+use crate::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Piece {
