@@ -44,7 +44,7 @@ mod inner {
 
     impl EventLog {
         #[inline]
-        pub fn should_log(&mut self) -> bool {
+        pub fn try_log(&mut self, _: i32) -> bool {
             false
         }
 
