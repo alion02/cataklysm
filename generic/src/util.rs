@@ -7,12 +7,12 @@ pub trait Bitboard {
     #[must_use]
     fn neighbors(self) -> Self;
 
-    /// Returns a bitboard containing the neighbors of set tiles, including themselves. The
-    /// returned bitboard may have bits spuriously set outside the [`BOARD`].
-    #[must_use]
-    fn or_neighbors(self) -> Self;
+    // /// Returns a bitboard containing the neighbors of set tiles, including themselves. The
+    // /// returned bitboard may have bits spuriously set outside the [`BOARD`].
+    // #[must_use]
+    // fn or_neighbors(self) -> Self;
 
-    fn expand(&mut self, mask: Self);
+    // fn expand(&mut self, mask: Self);
 }
 
 impl Bitboard for Bb {
@@ -25,15 +25,15 @@ impl Bitboard for Bb {
         }
     }
 
-    #[inline]
-    fn or_neighbors(self) -> Self {
-        self | self.neighbors()
-    }
+    // #[inline]
+    // fn or_neighbors(self) -> Self {
+    //     self | self.neighbors()
+    // }
 
-    #[inline]
-    fn expand(&mut self, mask: Self) {
-        todo!()
-    }
+    // #[inline]
+    // fn expand(&mut self, mask: Self) {
+    //     todo!()
+    // }
 }
 
 impl<const N: usize> Bitboard for Simd<Bb, N>
@@ -52,13 +52,13 @@ where
         }
     }
 
-    #[inline]
-    fn or_neighbors(self) -> Self {
-        self | self.neighbors()
-    }
+    // #[inline]
+    // fn or_neighbors(self) -> Self {
+    //     self | self.neighbors()
+    // }
 
-    #[inline]
-    fn expand(&mut self, mask: Self) {
-        todo!()
-    }
+    // #[inline]
+    // fn expand(&mut self, mask: Self) {
+    //     todo!()
+    // }
 }

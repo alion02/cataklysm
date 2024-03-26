@@ -14,6 +14,7 @@ extern crate alloc;
 mod influence;
 mod params;
 mod rules;
+mod tables;
 mod tt;
 mod util;
 
@@ -32,6 +33,7 @@ use core::{
 use common::*;
 use influence::*;
 use params::*;
+use tables::*;
 use tt::*;
 use util::*;
 
@@ -62,12 +64,6 @@ const TAG_OFFSET: u32 = (ARR_LEN - 1).ilog2() + 1;
 const PAT_OFFSET: u32 = TAG_OFFSET + 2;
 
 const HASH_SIDE_TO_MOVE: u64 = 0xf812ec2e34a9c388u64; // TODO: alt-seed
-
-#[allow(clippy::declare_interior_mutable_const)]
-const ATOMIC_U64_ZERO: AtomicU64 = AtomicU64::new(0);
-static HASH_PC_SQ: [AtomicU64; 256] = [ATOMIC_U64_ZERO; 256];
-static HASH_STACK: [AtomicU64; ((2 << HAND) - 2) * STACK_CAP * ARR_LEN] =
-    [ATOMIC_U64_ZERO; ((2 << HAND) - 2) * STACK_CAP * ARR_LEN];
 
 pub struct State<'a> {
     update: &'a mut UpdateState,

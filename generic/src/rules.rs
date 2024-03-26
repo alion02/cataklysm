@@ -56,8 +56,13 @@ impl<'a> State<'a> {
         let pat = pat(action);
         let sq = sq(action);
         if pat == 0 {
+            // Check if it's the first move (ply 0 or 1).
+            let player = player ^ (self.copy.ply < 2); // Strange codegen. AND with 1 thrice.
+
+            let new_stack = player as Stack + 2;
+
             hash ^= HASH_PC_SQ[action as usize].load(Relaxed);
-            hash ^= HASH_STACK[0].load(Relaxed); // TODO
+            hash ^= hash_stack(sq, new_stack, STACK_CAP as _).load(Relaxed);
             self.update.hashes[new_ply] = hash;
             // TODO: Prefetch
 
@@ -68,8 +73,6 @@ impl<'a> State<'a> {
                 _ => unreachable!(),
             });
 
-            // Check if it's the first move (ply 0 or 1).
-            let player = player ^ (self.copy.ply < 2); // Strange codegen. AND with 1 thrice.
             let inf = &mut self.update.influence.pair_mut()[player];
 
             // Unconditionally store. TODO: Is it worth checking if it needs unmaking?
@@ -101,7 +104,7 @@ impl<'a> State<'a> {
             new.val.last_irreversible = self.copy.ply;
 
             // Set the stack.
-            *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = player as Stack | 2;
+            *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = new_stack;
 
             // Copy the tall bitboard unchanged.
             new.val.tall = self.copy.tall;
