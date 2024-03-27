@@ -21,13 +21,9 @@ mod util;
 use alloc::sync::Arc;
 use core::{
     mem::transmute,
-    ops::{
-        BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign,
-        ControlFlow::{self, *},
-        Neg, Not, Shl, ShlAssign, Shr, ShrAssign,
-    },
+    ops::ControlFlow::{self, *},
     simd::{prelude::*, LaneCount, SupportedLaneCount},
-    sync::atomic::{AtomicBool, AtomicU64, Ordering::*},
+    sync::atomic::{AtomicBool, AtomicU8, Ordering::*},
 };
 
 use common::*;
@@ -79,7 +75,7 @@ pub struct State<'a> {
 #[repr(C)]
 struct UpdateState {
     influence: Influence,
-    tt: *mut Bucket,
+    tt: *mut u8,
     tt_idx_mask: usize,
     abort: Arc<AtomicBool>,
     nodes: u64,
@@ -156,6 +152,13 @@ fn pat(action: u16) -> u16 {
 }
 
 impl<'a> State<'a> {
+    #[inline]
+    #[allow(clippy::new_without_default)] // Will have parameters.
+    pub fn new() -> Self {
+        init();
+        todo!()
+    }
+
     #[inline]
     fn lend(&mut self) -> State {
         State {

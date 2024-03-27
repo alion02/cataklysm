@@ -61,10 +61,16 @@ impl<'a> State<'a> {
 
             let new_stack = player as Stack + 2;
 
-            hash ^= HASH_PC_SQ[action as usize].load(Relaxed);
-            hash ^= hash_stack(sq, new_stack, STACK_CAP as _).load(Relaxed);
+            hash ^= hash_sq_pc(action);
+            hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
+            unsafe {
+                // Touch the cache line.
+                self.update
+                    .tt
+                    .add(hash as usize & self.update.tt_idx_mask)
+                    .read_volatile();
+            }
             self.update.hashes[new_ply] = hash;
-            // TODO: Prefetch
 
             log!(self, match action >> TAG_OFFSET {
                 FLAT_TAG => MakePlaceFlat,
