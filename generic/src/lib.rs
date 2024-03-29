@@ -173,6 +173,11 @@ impl<'a> State<'a> {
     }
 
     #[inline]
+    fn is_first_move(&self) -> bool {
+        self.copy.ply < 2
+    }
+
+    #[inline]
     fn piece(&self) -> Bb {
         self.copy.road | self.copy.noble
     }

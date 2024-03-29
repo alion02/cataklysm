@@ -4,6 +4,7 @@ use crate::*;
 pub union Influence {
     pub pair: Pair<Simd<Bb, 4>>,
     pub vec: Simd<Bb, 8>,
+    pub arr: [Simd<Bb, 4>; 2],
 }
 
 impl Influence {
@@ -15,5 +16,10 @@ impl Influence {
     #[inline]
     pub fn vec_mut(&mut self) -> &mut Simd<Bb, 8> {
         unsafe { &mut self.vec }
+    }
+
+    #[inline]
+    pub fn arr_mut(&mut self) -> &mut [Simd<Bb, 4>; 2] {
+        unsafe { &mut self.arr }
     }
 }

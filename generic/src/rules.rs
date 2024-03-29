@@ -52,12 +52,11 @@ impl<'a> State<'a> {
 
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
 
-        let player = self.player();
+        let mut player = self.player();
         let pat = pat(action);
         let sq = sq(action);
         if pat == 0 {
-            // Check if it's the first move (ply 0 or 1).
-            let player = player ^ (self.copy.ply < 2); // Strange codegen. AND with 1 thrice.
+            player ^= self.is_first_move();
 
             let new_stack = player as Stack + 2;
 
@@ -147,5 +146,22 @@ impl<'a> State<'a> {
                 log!(self, PlacementExpansionIterations(i));
             }
         }
+    }
+
+    #[no_mangle]
+    #[inline]
+    pub(crate) fn unmake(&mut self, unmake: &Unmake, action: u16) {
+        let mut player = self.player();
+        let pat = pat(action);
+        let sq = sq(action);
+        if pat == 0 {
+            player ^= self.is_first_move();
+            unsafe {
+                *(self.update as *mut UpdateState as *mut u8)
+                    .with_addr(unmake.kind.place.pieces_left_ptr) += 1;
+                *self.update.stacks.get_unchecked_mut(sq as usize) = 1;
+            }
+        }
+        self.update.influence.pair_mut()[player] = unmake.influence; // this is ass
     }
 }
