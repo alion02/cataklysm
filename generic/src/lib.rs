@@ -168,8 +168,8 @@ impl<'a> State<'a> {
     }
 
     #[inline]
-    fn player(&self) -> bool {
-        self.copy.ply & 1 != 0
+    fn player(&self) -> Color {
+        (self.copy.ply as u32 & 1 != 0).into()
     }
 
     #[inline]

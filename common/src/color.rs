@@ -1,4 +1,7 @@
-use core::ops::{BitXor, BitXorAssign, Not};
+use core::{
+    mem::transmute,
+    ops::{BitXor, BitXorAssign},
+};
 
 use crate::*;
 
@@ -10,7 +13,6 @@ pub enum Color {
 }
 
 impl From<bool> for Color {
-    #[no_mangle]
     #[inline]
     fn from(value: bool) -> Self {
         if value {
@@ -21,44 +23,40 @@ impl From<bool> for Color {
     }
 }
 
-impl Color {
-    #[no_mangle]
-    #[inline]
-    pub fn sign(self) -> i32 {
-        match self {
-            White => 1,
-            Black => -1,
-        }
-    }
-}
+// impl Color {
+//     #[inline]
+//     pub fn sign(self) -> i32 {
+//         match self {
+//             White => 1,
+//             Black => -1,
+//         }
+//     }
+// }
 
-impl Not for Color {
+// impl Not for Color {
+//     type Output = Self;
+
+//     #[inline]
+//     fn not(self) -> Self {
+//         match self {
+//             White => Black,
+//             Black => White,
+//         }
+//     }
+// }
+
+impl BitXor<bool> for Color {
     type Output = Self;
 
-    #[no_mangle]
     #[inline]
-    fn not(self) -> Self {
-        match self {
-            White => Black,
-            Black => White,
-        }
+    fn bitxor(self, rhs: bool) -> Self {
+        unsafe { transmute(self as u32 ^ rhs as u32) }
     }
 }
 
-impl BitXor for Color {
-    type Output = Self;
-
-    #[no_mangle]
+impl BitXorAssign<bool> for Color {
     #[inline]
-    fn bitxor(self, rhs: Self) -> Self {
-        (self as u32 ^ rhs as u32 != 0).into()
-    }
-}
-
-impl BitXorAssign for Color {
-    #[no_mangle]
-    #[inline]
-    fn bitxor_assign(&mut self, rhs: Self) {
+    fn bitxor_assign(&mut self, rhs: bool) {
         *self = *self ^ rhs;
     }
 }

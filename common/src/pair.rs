@@ -3,6 +3,8 @@ use core::{
     ops::{Index, IndexMut},
 };
 
+use crate::Color;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Pair<T> {
@@ -27,18 +29,18 @@ impl<T: Copy> Pair<T> {
     }
 }
 
-impl<T> Index<bool> for Pair<T> {
+impl<T> Index<Color> for Pair<T> {
     type Output = T;
 
     #[inline]
-    fn index(&self, index: bool) -> &T {
+    fn index(&self, index: Color) -> &T {
         unsafe { &transmute::<_, &[T; 2]>(self)[index as usize] }
     }
 }
 
-impl<T> IndexMut<bool> for Pair<T> {
+impl<T> IndexMut<Color> for Pair<T> {
     #[inline]
-    fn index_mut(&mut self, index: bool) -> &mut T {
+    fn index_mut(&mut self, index: Color) -> &mut T {
         unsafe { &mut transmute::<_, &mut [T; 2]>(self)[index as usize] }
     }
 }

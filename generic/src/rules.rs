@@ -60,8 +60,8 @@ impl<'a> State<'a> {
 
             let new_stack = player as Stack + 2;
 
-            hash ^= hash_sq_pc(action);
             hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
+            hash ^= hash_sq_pc(action);
             unsafe {
                 // Touch the cache line.
                 self.update
@@ -162,6 +162,6 @@ impl<'a> State<'a> {
                 *self.update.stacks.get_unchecked_mut(sq as usize) = 1;
             }
         }
-        self.update.influence.pair_mut()[player] = unmake.influence; // this is ass
+        self.update.influence.pair_mut()[player] = unmake.influence;
     }
 }

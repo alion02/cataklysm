@@ -13,7 +13,6 @@ pub enum Direction {
 impl Neg for Direction {
     type Output = Self;
 
-    #[no_mangle]
     #[inline]
     fn neg(self) -> Self::Output {
         // Generates a lookup table
