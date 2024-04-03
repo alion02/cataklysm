@@ -16,12 +16,12 @@ pub fn hash_sq_pc(i: u16) -> u64 {
 }
 
 #[inline]
-fn hash_stack_index(sq: u16, stack: u32, rem_cap: u32) -> usize {
-    sq as usize + rem_cap as usize * ARR_LEN + (stack as usize - 2) * ARR_LEN * (STACK_CAP + 1)
+fn hash_stack_index(sq: usize, stack: u32, rem_cap: u32) -> usize {
+    sq + rem_cap as usize * ARR_LEN + (stack as usize - 2) * ARR_LEN * (STACK_CAP + 1)
 }
 
 #[inline]
-pub fn hash_stack(sq: u16, stack: u32, rem_cap: u32) -> u64 {
+pub fn hash_stack(sq: usize, stack: u32, rem_cap: u32) -> u64 {
     let i = hash_stack_index(sq, stack, rem_cap);
     unsafe {
         debug_assert!(i < HASH_STACK.len());
@@ -54,6 +54,8 @@ pub fn init() {
         unsafe {
             HASH_SQ_PC[(sq | WALL_TAG << TAG_OFFSET) as usize] = rng.gen();
             HASH_SQ_PC[(sq | CAP_TAG << TAG_OFFSET) as usize] = rng.gen();
+
+            let sq = sq as usize;
 
             for stack in 2u32..2 << HAND {
                 let height = stack.ilog2() as usize;

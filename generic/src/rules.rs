@@ -52,6 +52,14 @@ impl<'a> State<'a> {
 
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
 
+        // Represents the opponent's pieces. No need to add our new pieces, if any.
+        let mut opp_own = self.copy.own ^ self.piece();
+
+        let PovPair {
+            my: mut inf,
+            opp: mut opp_inf,
+        } = *self.copy.influence.pair_mut();
+
         let mut player = self.player();
         let pat = pat(action);
         let sq = sq(action);
@@ -60,7 +68,8 @@ impl<'a> State<'a> {
 
             let new_stack = player as Stack + 2;
 
-            hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
+            // Update the hash.
+            hash ^= hash_stack(sq as _, new_stack as _, STACK_CAP as _);
             hash ^= hash_sq_pc(action);
             unsafe {
                 // Touch the cache line.
@@ -70,18 +79,6 @@ impl<'a> State<'a> {
                     .read_volatile();
             }
             self.update.hashes[new_ply] = hash;
-
-            log!(self, match action >> TAG_OFFSET {
-                FLAT_TAG => MakePlaceFlat,
-                WALL_TAG => MakePlaceWall,
-                CAP_TAG => MakePlaceCap,
-                _ => unreachable!(),
-            });
-
-            let inf = &mut self.update.influence.pair_mut()[player];
-
-            // Unconditionally store. TODO: Is it worth checking if it needs unmaking?
-            unmake.val.influence = *inf;
 
             // Remove the appropriate piece from the reserves.
             let pieces_left_ref = &mut (if action >= CAP_TAG << TAG_OFFSET {
@@ -94,19 +91,15 @@ impl<'a> State<'a> {
 
             let road_bit = (action as Bb >> ROAD_TAG_OFFSET & 1) << sq;
             let simd_road_bit = Simd::splat(road_bit);
-            let adjacent = *inf & simd_road_bit;
+            let adjacent = inf & simd_road_bit;
 
             // Set the road and noble bits, if appropriate piece.
             let new_road = self.copy.road ^ road_bit;
             new.val.road = new_road;
             new.val.noble = self.copy.noble ^ (action as Bb >> NOBLE_TAG_OFFSET & 1) << sq;
 
-            // Clear and set the owner.
-            let new_owner = self.copy.owner & !(1 << sq) | (player as Bb) << sq;
-            new.val.owner = new_owner;
-
             // Placement is irreversible.
-            new.val.last_irreversible = self.copy.ply;
+            new.val.last_irreversible = new_ply;
 
             // Set the stack.
             *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = new_stack;
@@ -122,11 +115,11 @@ impl<'a> State<'a> {
                     .select(simd_road_bit.neighbors(), Simd::splat(0));
 
                 // Add the neighbors.
-                let mut old_inf = *inf;
-                *inf |= neighbors; // Codegens a spurious store. Alternatives worse.
+                let mut old_inf = inf;
+                inf |= neighbors;
 
                 // Get a bitboard representing our road pieces.
-                let my_road = Simd::splat(new_road & (new_owner ^ (player as Bb).wrapping_sub(1)));
+                let my_road = Simd::splat(new_road & self.copy.own);
 
                 // Expandable neighbors are those that are our road pieces.
                 let mut expandable = neighbors & my_road;
@@ -138,14 +131,89 @@ impl<'a> State<'a> {
                 // Assume winning placements are rare and/or handled before make.
                 while (expandable & !old_inf).reduce_or() != 0 {
                     i += 1;
-                    old_inf = *inf;
-                    *inf |= expandable.neighbors();
-                    expandable = *inf & my_road;
+                    old_inf = inf;
+                    inf |= expandable.neighbors();
+                    expandable = inf & my_road;
                 }
 
                 log!(self, PlacementExpansionIterations(i));
             }
+
+            log!(self, match action >> TAG_OFFSET {
+                FLAT_TAG => MakePlaceFlat,
+                WALL_TAG => MakePlaceWall,
+                CAP_TAG => MakePlaceCap,
+                _ => unreachable!(),
+            });
+
+            // TODO: Help the compiler by pinning registers with inline assembly.
+            // Handle the swap rule.
+            if new_ply == 2 {
+                (inf, opp_inf) = (opp_inf, inf); // This partially leaks into the normal code path.
+
+                // At this point, opp_own represents the black piece placed by white, but it should
+                // represent the white piece placed by black just now. Fix accordingly.
+                opp_own ^= opt_fence!(new_road); // Stop LLVM from hoisting this.
+            }
+        } else {
+            // Decode the pattern.
+            let mut pat = pat as u32; // u16 operations are slow, and LLVM does not promote them.
+            let mut zeros = pat.trailing_zeros();
+            let taken = HAND - zeros;
+
+            let stack = *unsafe { self.update.stacks.get_unchecked(sq as usize) };
+            let new_stack = stack >> taken;
+            let mut hand = (stack as u32).wrapping_shl(taken.wrapping_neg()); // Avoid u64/u128.
+
+            const STEP_OFFSET_TABLE: u32 =
+                1 << 0 | (ROW_LEN as u32) << 8 | 256 - 1 << 16 | (256 - ROW_LEN as u32) << 24;
+            let dir = action >> TAG_OFFSET & 3;
+            let offset = (STEP_OFFSET_TABLE >> dir * 8) as i8 as isize;
+            let mut curr_sq = sq as usize;
+            let mut new_tall = self.copy.tall;
+            let mut new_road = self.copy.road;
+            loop {
+                pat &= pat - 1;
+                if pat == 0 {
+                    break;
+                }
+
+                // Operate on a transitory stack.
+                // The top piece was a flat or nothing, and now becomes a flat.
+
+                let next = pat.trailing_zeros();
+                let count = next - zeros;
+                zeros = next;
+                curr_sq = curr_sq.wrapping_add_signed(offset);
+
+                let stack = unsafe { self.update.stacks.get_unchecked_mut(curr_sq) };
+                let rem_cap = stack.leading_zeros();
+                let dropped_pieces = hand.wrapping_shr(count.wrapping_neg());
+                let dropped_stack = dropped_pieces + 1 << count;
+                let shifted_stack = *stack << count;
+                let toggle_ownership = (dropped_pieces
+                    ^ if *stack == 1 {
+                        // If the stack is empty, the own bit is off. If the colors of the topmost
+                        // dropped piece and the player don't match, the opponent owns the stack.
+                        player as u32
+                    } else {
+                        // Otherwise, ownership of the stack is transferred iff the colors of the
+                        // topmost dropped piece and the previous top of the stack don't match.
+                        *stack as u32
+                    })
+                    & 1;
+
+                *stack = shifted_stack | dropped_pieces as Stack;
+                hand <<= count;
+                hash ^= hash_stack(curr_sq, dropped_stack, rem_cap);
+                opp_own ^= (toggle_ownership as Bb) << curr_sq;
+                new_tall |= ((*stack >= 1 << 2) as Bb) << curr_sq;
+                new_road |= 1 << curr_sq;
+            }
         }
+
+        new.val.own = opp_own;
+        new.val.influence.pair = PovPair::new(opp_inf, inf);
     }
 
     #[no_mangle]
@@ -162,6 +230,5 @@ impl<'a> State<'a> {
                 *self.update.stacks.get_unchecked_mut(sq as usize) = 1;
             }
         }
-        self.update.influence.pair_mut()[player] = unmake.influence;
     }
 }

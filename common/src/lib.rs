@@ -8,6 +8,8 @@ extern crate alloc;
 pub mod color;
 pub mod direction;
 pub mod event_log;
+#[macro_use]
+pub mod opt_fence;
 pub mod out;
 pub mod pair;
 pub mod piece;

@@ -44,3 +44,17 @@ impl<T> IndexMut<Color> for Pair<T> {
         unsafe { &mut transmute::<_, &mut [T; 2]>(self)[index as usize] }
     }
 }
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PovPair<T> {
+    pub my: T,
+    pub opp: T,
+}
+
+impl<T> PovPair<T> {
+    #[inline]
+    pub fn new(my: T, opp: T) -> Self {
+        Self { my, opp }
+    }
+}

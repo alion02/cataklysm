@@ -3,10 +3,12 @@
 	clippy::precedence, // Personal opinion
 	clippy::comparison_chain, // Required for optimal performance at the time of writing
     clippy::absurd_extreme_comparisons, // Misfires for branches involving constants
+    internal_features, // We use `core_intrinsics`
 )]
 #![feature(
     portable_simd, // Used extensively for performance
     strict_provenance, // Provides `with_addr`
+    core_intrinsics, // Provides `unchecked_shl`, `unlikely`
 )]
 
 extern crate alloc;
@@ -20,6 +22,8 @@ mod util;
 
 use alloc::sync::Arc;
 use core::{
+    hint::black_box,
+    intrinsics::{unchecked_shl, unlikely},
     mem::transmute,
     ops::ControlFlow::{self, *},
     simd::{prelude::*, LaneCount, SupportedLaneCount},
@@ -74,7 +78,6 @@ pub struct State<'a> {
 
 #[repr(C)]
 struct UpdateState {
-    influence: Influence,
     tt: *mut u8,
     tt_idx_mask: usize,
     abort: Arc<AtomicBool>,
@@ -84,7 +87,7 @@ struct UpdateState {
     generation: u8,
     half_komi: i8,
     log: EventLog,
-    stacks: [Stack; ROW_LEN],
+    stacks: [Stack; ARR_LEN],
     inactive_abort: Arc<AtomicBool>,
     hashes: WrappingArray<u64, 64>,
     killers: WrappingArray<u16, 32>,
@@ -93,7 +96,12 @@ struct UpdateState {
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct CopyState {
-    owner: Bb,
+    /// Influence maps extending from each edge. Contains all contiguous road tiles and their
+    /// neighbors, as well as all edge tiles. May contain garbage bits outside the bitboards.
+    influence: Influence,
+    /// Specifies all tiles belonging to the active player. No empty tiles or garbage bits. Empty
+    /// on plies 0 and 1.
+    own: Bb,
     road: Bb,
     noble: Bb,
     tall: Bb,
@@ -103,7 +111,6 @@ struct CopyState {
 
 #[derive(Clone, Copy)]
 struct Unmake {
-    influence: Simd<Bb, 4>,
     kind: UnmakeKind,
 }
 

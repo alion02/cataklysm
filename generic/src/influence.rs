@@ -1,15 +1,16 @@
 use crate::*;
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub union Influence {
-    pub pair: Pair<Simd<Bb, 4>>,
+    pub pair: PovPair<Simd<Bb, 4>>,
     pub vec: Simd<Bb, 8>,
     pub arr: [Simd<Bb, 4>; 2],
 }
 
 impl Influence {
     #[inline]
-    pub fn pair_mut(&mut self) -> &mut Pair<Simd<Bb, 4>> {
+    pub fn pair_mut(&mut self) -> &mut PovPair<Simd<Bb, 4>> {
         unsafe { &mut self.pair }
     }
 
