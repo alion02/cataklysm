@@ -48,12 +48,17 @@ impl<'a> State<'a> {
     #[inline]
     pub(crate) fn make(&mut self, new: &mut Out<CopyState>, unmake: &mut Out<Unmake>, action: u16) {
         let new_ply = self.copy.ply + 1;
-        new.val.ply = new_ply;
 
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
 
         // Represents the opponent's pieces. No need to add our new pieces, if any.
         let mut opp_own = self.copy.own ^ self.piece();
+
+        let mut new_road = self.copy.road;
+        let mut new_noble = self.copy.noble;
+        let mut new_tall = self.copy.tall;
+        let new_irreversible;
+        let new_stack;
 
         let PovPair {
             my: mut inf,
@@ -61,24 +66,24 @@ impl<'a> State<'a> {
         } = *self.copy.influence.pair_mut();
 
         let mut player = self.player();
+
         let pat = pat(action);
         let sq = sq(action);
         if pat == 0 {
             player ^= self.is_first_move();
 
-            let new_stack = player as Stack + 2;
+            new_stack = player as Stack + 2;
 
             // Update the hash.
             hash ^= hash_stack(sq as _, new_stack as _, STACK_CAP as _);
             hash ^= hash_sq_pc(action);
             unsafe {
-                // Touch the cache line.
+                // Touch the cache line as soon as possible.
                 self.update
                     .tt
                     .add(hash as usize & self.update.tt_idx_mask)
                     .read_volatile();
             }
-            self.update.hashes[new_ply] = hash;
 
             // Remove the appropriate piece from the reserves.
             let pieces_left_ref = &mut (if action >= CAP_TAG << TAG_OFFSET {
@@ -94,18 +99,11 @@ impl<'a> State<'a> {
             let adjacent = inf & simd_road_bit;
 
             // Set the road and noble bits, if appropriate piece.
-            let new_road = self.copy.road ^ road_bit;
-            new.val.road = new_road;
-            new.val.noble = self.copy.noble ^ (action as Bb >> NOBLE_TAG_OFFSET & 1) << sq;
+            new_road ^= road_bit;
+            new_noble ^= (action as Bb >> NOBLE_TAG_OFFSET & 1) << sq;
 
             // Placement is irreversible.
-            new.val.last_irreversible = new_ply;
-
-            // Set the stack.
-            *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = new_stack;
-
-            // Copy the tall bitboard unchanged.
-            new.val.tall = self.copy.tall;
+            new_irreversible = new_ply;
 
             // Check if the new road bit is adjacent to any of the influence masks.
             if adjacent.reduce_or() != 0 {
@@ -162,7 +160,7 @@ impl<'a> State<'a> {
             let taken = HAND - zeros;
 
             let stack = *unsafe { self.update.stacks.get_unchecked(sq as usize) };
-            let new_stack = stack >> taken;
+            new_stack = stack >> taken;
             let mut hand = (stack as u32).wrapping_shl(taken.wrapping_neg()); // Avoid u64/u128.
 
             const STEP_OFFSET_TABLE: u32 =
@@ -170,8 +168,6 @@ impl<'a> State<'a> {
             let dir = action >> TAG_OFFSET & 3;
             let offset = (STEP_OFFSET_TABLE >> dir * 8) as i8 as isize;
             let mut curr_sq = sq as usize;
-            let mut new_tall = self.copy.tall;
-            let mut new_road = self.copy.road;
             loop {
                 pat &= pat - 1;
                 if pat == 0 {
@@ -210,10 +206,24 @@ impl<'a> State<'a> {
                 new_tall |= ((*stack >= 1 << 2) as Bb) << curr_sq;
                 new_road |= 1 << curr_sq;
             }
+
+            // Spreads are usually reversible.
+            new_irreversible = self.copy.last_irreversible;
         }
 
-        new.val.own = opp_own;
-        new.val.influence.pair = PovPair::new(opp_inf, inf);
+        self.update.hashes[new_ply] = hash;
+        *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = new_stack;
+        new.val = CopyState {
+            influence: Influence {
+                pair: PovPair::new(opp_inf, inf),
+            },
+            own: opp_own,
+            road: new_road,
+            noble: new_noble,
+            tall: new_tall,
+            ply: new_ply,
+            last_irreversible: new_irreversible,
+        };
     }
 
     #[no_mangle]
