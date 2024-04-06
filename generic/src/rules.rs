@@ -51,9 +51,21 @@ impl<'a> State<'a> {
 
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
 
+        macro_rules! touch_bucket {
+            () => {
+                unsafe {
+                    // Touch the bucket's cache line.
+                    self.update
+                        .tt
+                        .add(hash as usize & self.update.tt_idx_mask)
+                        .cast::<u32>()
+                        .read_volatile();
+                }
+            };
+        }
+
         // Represents the opponent's pieces. No need to add our new pieces, if any.
         let mut opp_own = self.copy.own ^ self.piece();
-
         let mut new_road = self.copy.road;
         let mut new_noble = self.copy.noble;
         let mut new_tall = self.copy.tall;
@@ -68,22 +80,16 @@ impl<'a> State<'a> {
         let mut player = self.player();
 
         let pat = pat(action);
-        let sq = sq(action);
+        let sq = sq(action) as usize;
         if pat == 0 {
             player ^= self.is_first_move();
 
             new_stack = player as Stack + 2;
 
             // Update the hash.
-            hash ^= hash_stack(sq as _, new_stack as _, STACK_CAP as _);
-            hash ^= hash_sq_pc(action);
-            unsafe {
-                // Touch the cache line as soon as possible.
-                self.update
-                    .tt
-                    .add(hash as usize & self.update.tt_idx_mask)
-                    .read_volatile();
-            }
+            hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
+            hash ^= hash_sq_pc(action as _);
+            touch_bucket!();
 
             // Remove the appropriate piece from the reserves.
             let pieces_left_ref = &mut (if action >= CAP_TAG << TAG_OFFSET {
@@ -159,16 +165,41 @@ impl<'a> State<'a> {
             let mut zeros = pat.trailing_zeros();
             let taken = HAND - zeros;
 
-            let stack = *unsafe { self.update.stacks.get_unchecked(sq as usize) };
+            let stack = *unsafe { self.update.stacks.get_unchecked(sq) };
             new_stack = stack >> taken;
+            unmake.val.kind.spread.orig_stack = stack;
+
+            let not_empty = (new_stack != 1) as Bb;
+
+            // Toggle ownership if the top color of the stack changed and the new stack isn't empty.
+            // By default, ownership is cleared due to the perspective switch.
+            let toggle_ownership = (stack ^ new_stack) as Bb & not_empty;
+            let taken_bit = unsafe { unchecked_shl(1, taken) };
+            let is_road = new_road >> sq & 1;
+            let is_noble = new_noble >> sq & 1;
+            let piece_tag = (is_road + 2 * is_noble << TAG_OFFSET) as usize;
+
+            hash ^= hash_stack(
+                sq,
+                (stack as u32 & taken_bit - 1) + taken_bit,
+                new_stack.leading_zeros(), // Base of the removed stack.
+            );
+            hash ^= hash_sq_pc(sq + piece_tag);
+            opp_own ^= toggle_ownership << sq;
+            new_road &= !(1 << sq);
+            new_road |= not_empty << sq;
+            new_noble &= !(1 << sq);
+            new_tall &= !(((new_stack < 1 << 2) as Bb) << sq);
+
             let mut hand = (stack as u32).wrapping_shl(taken.wrapping_neg()); // Avoid u64/u128.
 
             const STEP_OFFSET_TABLE: u32 =
                 1 << 0 | (ROW_LEN as u32) << 8 | 256 - 1 << 16 | (256 - ROW_LEN as u32) << 24;
             let dir = action >> TAG_OFFSET & 3;
             let offset = (STEP_OFFSET_TABLE >> dir * 8) as i8 as isize;
-            let mut curr_sq = sq as usize;
+            let mut curr_sq = sq;
             loop {
+                curr_sq = curr_sq.wrapping_add_signed(offset);
                 pat &= pat - 1;
                 if pat == 0 {
                     break;
@@ -180,7 +211,6 @@ impl<'a> State<'a> {
                 let next = pat.trailing_zeros();
                 let count = next - zeros;
                 zeros = next;
-                curr_sq = curr_sq.wrapping_add_signed(offset);
 
                 let stack = unsafe { self.update.stacks.get_unchecked_mut(curr_sq) };
                 let rem_cap = stack.leading_zeros();
@@ -203,8 +233,8 @@ impl<'a> State<'a> {
                 hand <<= count;
                 hash ^= hash_stack(curr_sq, dropped_stack, rem_cap);
                 opp_own ^= (toggle_ownership as Bb) << curr_sq;
-                new_tall |= ((*stack >= 1 << 2) as Bb) << curr_sq;
                 new_road |= 1 << curr_sq;
+                new_tall |= ((*stack >= 1 << 2) as Bb) << curr_sq;
             }
 
             // Spreads are usually reversible.
@@ -212,7 +242,7 @@ impl<'a> State<'a> {
         }
 
         self.update.hashes[new_ply] = hash;
-        *unsafe { self.update.stacks.get_unchecked_mut(sq as usize) } = new_stack;
+        *unsafe { self.update.stacks.get_unchecked_mut(sq) } = new_stack;
         new.val = CopyState {
             influence: Influence {
                 pair: PovPair::new(opp_inf, inf),

@@ -8,7 +8,7 @@
 #![feature(
     portable_simd, // Used extensively for performance
     strict_provenance, // Provides `with_addr`
-    core_intrinsics, // Provides `unchecked_shl`, `unlikely`
+    core_intrinsics, // Provides `unchecked_shl`, `unlikely`, `likely`
 )]
 
 extern crate alloc;
@@ -23,7 +23,7 @@ mod util;
 use alloc::sync::Arc;
 use core::{
     hint::black_box,
-    intrinsics::{unchecked_shl, unlikely},
+    intrinsics::{likely, unchecked_shl, unlikely},
     mem::transmute,
     ops::ControlFlow::{self, *},
     simd::{prelude::*, LaneCount, SupportedLaneCount},
@@ -126,7 +126,9 @@ struct UnmakePlace {
 }
 
 #[derive(Clone, Copy)]
-struct UnmakeSpread {}
+struct UnmakeSpread {
+    orig_stack: Stack,
+}
 
 #[macro_export]
 macro_rules! log {

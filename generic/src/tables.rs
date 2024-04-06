@@ -6,9 +6,10 @@ const HASH_STACK_LEN: usize = ((2 << HAND) - 2) * (STACK_CAP + 1) * ARR_LEN;
 static mut HASH_SQ_PC: [u64; 1 << PAT_OFFSET] = [0; 1 << PAT_OFFSET];
 static mut HASH_STACK: [u64; HASH_STACK_LEN] = [0; HASH_STACK_LEN];
 
+// TODO: LLVM happily loads the addresses of the tables on every access for some reason. Investigate.
+
 #[inline]
-pub fn hash_sq_pc(i: u16) -> u64 {
-    let i = i as usize;
+pub fn hash_sq_pc(i: usize) -> u64 {
     unsafe {
         debug_assert!(i < HASH_SQ_PC.len());
         *HASH_SQ_PC.get_unchecked(i)
