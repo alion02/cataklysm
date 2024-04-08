@@ -3,6 +3,7 @@
 	clippy::precedence, // Personal opinion
 	clippy::comparison_chain, // Required for optimal performance at the time of writing
     clippy::absurd_extreme_comparisons, // Misfires for branches involving constants
+    clippy::unnecessary_cast, // Misfires because the crate is pseudo-generic
     internal_features, // We use `core_intrinsics`
 )]
 #![feature(

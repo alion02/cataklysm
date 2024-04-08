@@ -54,7 +54,7 @@ impl<'a> State<'a> {
         macro_rules! touch_bucket {
             () => {
                 unsafe {
-                    // Touch the bucket's cache line.
+                    // Touch the bucket's cache line. Should work as portable, stable prefetch.
                     self.update
                         .tt
                         .add(hash as usize & self.update.tt_idx_mask)
@@ -64,6 +64,7 @@ impl<'a> State<'a> {
             };
         }
 
+        let mut new_inf = self.copy.influence;
         // Represents the opponent's pieces. No need to add our new pieces, if any.
         let mut opp_own = self.copy.own ^ self.piece();
         let mut new_road = self.copy.road;
@@ -71,11 +72,6 @@ impl<'a> State<'a> {
         let mut new_tall = self.copy.tall;
         let new_irreversible;
         let new_stack;
-
-        let PovPair {
-            my: mut inf,
-            opp: mut opp_inf,
-        } = *self.copy.influence.pair_mut();
 
         let mut player = self.player();
 
@@ -90,6 +86,15 @@ impl<'a> State<'a> {
             hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
             hash ^= hash_sq_pc(action as _);
             touch_bucket!();
+
+            let mut inf = new_inf.pair_mut().my;
+
+            log!(self, match action >> TAG_OFFSET {
+                FLAT_TAG => MakePlaceFlat,
+                WALL_TAG => MakePlaceWall,
+                CAP_TAG => MakePlaceCap,
+                _ => unreachable!(),
+            });
 
             // Remove the appropriate piece from the reserves.
             let pieces_left_ref = &mut (if action >= CAP_TAG << TAG_OFFSET {
@@ -122,14 +127,14 @@ impl<'a> State<'a> {
                 let mut old_inf = inf;
                 inf |= neighbors;
 
-                // Get a bitboard representing our road pieces.
+                // Get a bitboard representing our road pieces. The own mask is missing the new bit,
+                // but it's not necessary because its neighbors are already added.
                 let my_road = Simd::splat(new_road & self.copy.own);
 
                 // Expandable neighbors are those that are our road pieces.
                 let mut expandable = neighbors & my_road;
 
-                // Count iterations for logging purposes.
-                let mut i = 0;
+                let mut i = 0; // Count iterations for logging purposes.
 
                 // If we have any such neighbors that are not part of the old influence, expand.
                 // Assume winning placements are rare and/or handled before make.
@@ -140,40 +145,38 @@ impl<'a> State<'a> {
                     expandable = inf & my_road;
                 }
 
+                new_inf.pair_mut().my = inf;
+
                 log!(self, PlacementExpansionIterations(i));
             }
-
-            log!(self, match action >> TAG_OFFSET {
-                FLAT_TAG => MakePlaceFlat,
-                WALL_TAG => MakePlaceWall,
-                CAP_TAG => MakePlaceCap,
-                _ => unreachable!(),
-            });
 
             // TODO: Help the compiler by pinning registers with inline assembly.
             // Handle the swap rule.
             if new_ply == 2 {
-                (inf, opp_inf) = (opp_inf, inf); // This partially leaks into the normal code path.
+                new_inf.swap();
 
                 // At this point, opp_own represents the black piece placed by white, but it should
                 // represent the white piece placed by black just now. Fix accordingly.
                 opp_own ^= opt_fence!(new_road); // Stop LLVM from hoisting this.
             }
         } else {
-            // Decode the pattern.
             let mut pat = pat as u32; // u16 operations are slow, and LLVM does not promote them.
+
+            log!(self, SpreadDistance(pat.count_ones() as _));
+
+            // Decode the pattern.
             let mut zeros = pat.trailing_zeros();
             let taken = HAND - zeros;
 
-            let stack = *unsafe { self.update.stacks.get_unchecked(sq) };
-            new_stack = stack >> taken;
-            unmake.val.kind.spread.orig_stack = stack;
+            let src_stack = *unsafe { self.update.stacks.get_unchecked(sq) };
+            new_stack = src_stack >> taken;
+            unmake.val.kind.spread.orig_stack = src_stack;
 
             let not_empty = (new_stack != 1) as Bb;
 
             // Toggle ownership if the top color of the stack changed and the new stack isn't empty.
             // By default, ownership is cleared due to the perspective switch.
-            let toggle_ownership = (stack ^ new_stack) as Bb & not_empty;
+            let toggle_ownership = (src_stack ^ new_stack) as Bb & not_empty;
             let taken_bit = unsafe { unchecked_shl(1, taken) };
             let is_road = new_road >> sq & 1;
             let is_noble = new_noble >> sq & 1;
@@ -181,25 +184,29 @@ impl<'a> State<'a> {
 
             hash ^= hash_stack(
                 sq,
-                (stack as u32 & taken_bit - 1) + taken_bit,
+                (src_stack as u32 & taken_bit - 1) + taken_bit,
                 new_stack.leading_zeros(), // Base of the removed stack.
             );
             hash ^= hash_sq_pc(sq + piece_tag);
             opp_own ^= toggle_ownership << sq;
-            new_road &= !(1 << sq);
-            new_road |= not_empty << sq;
+            new_road = new_road & !(1 << sq) | not_empty << sq;
             new_noble &= !(1 << sq);
             new_tall &= !(((new_stack < 1 << 2) as Bb) << sq);
 
-            let mut hand = (stack as u32).wrapping_shl(taken.wrapping_neg()); // Avoid u64/u128.
+            let mut hand = (src_stack as u32).wrapping_shl(taken.wrapping_neg()); // Avoid u64/u128.
 
             const STEP_OFFSET_TABLE: u32 =
                 1 << 0 | (ROW_LEN as u32) << 8 | 256 - 1 << 16 | (256 - ROW_LEN as u32) << 24;
             let dir = action >> TAG_OFFSET & 3;
             let offset = (STEP_OFFSET_TABLE >> dir * 8) as i8 as isize;
-            let mut curr_sq = sq;
+
+            let mut drop_sq = sq;
+            let mut stack;
+            let mut rem_cap;
             loop {
-                curr_sq = curr_sq.wrapping_add_signed(offset);
+                drop_sq = drop_sq.wrapping_add_signed(offset);
+                stack = unsafe { self.update.stacks.get_unchecked_mut(drop_sq) };
+                rem_cap = stack.leading_zeros();
                 pat &= pat - 1;
                 if pat == 0 {
                     break;
@@ -209,14 +216,11 @@ impl<'a> State<'a> {
                 // The top piece was a flat or nothing, and now becomes a flat.
 
                 let next = pat.trailing_zeros();
-                let count = next - zeros;
+                let dropped = next - zeros;
                 zeros = next;
 
-                let stack = unsafe { self.update.stacks.get_unchecked_mut(curr_sq) };
-                let rem_cap = stack.leading_zeros();
-                let dropped_pieces = hand.wrapping_shr(count.wrapping_neg());
-                let dropped_stack = dropped_pieces + 1 << count;
-                let shifted_stack = *stack << count;
+                let dropped_pieces = hand.wrapping_shr(dropped.wrapping_neg());
+                let dropped_stack = dropped_pieces + (1 << dropped);
                 let toggle_ownership = (dropped_pieces
                     ^ if *stack == 1 {
                         // If the stack is empty, the own bit is off. If the colors of the topmost
@@ -229,24 +233,70 @@ impl<'a> State<'a> {
                     })
                     & 1;
 
-                *stack = shifted_stack | dropped_pieces as Stack;
-                hand <<= count;
-                hash ^= hash_stack(curr_sq, dropped_stack, rem_cap);
-                opp_own ^= (toggle_ownership as Bb) << curr_sq;
-                new_road |= 1 << curr_sq;
-                new_tall |= ((*stack >= 1 << 2) as Bb) << curr_sq;
+                *stack = *stack << dropped | dropped_pieces as Stack;
+                hand <<= dropped;
+                hash ^= hash_stack(drop_sq, dropped_stack, rem_cap);
+                opp_own ^= (toggle_ownership as Bb) << drop_sq;
+                new_road |= 1 << drop_sq;
+                new_tall |= ((*stack >= 1 << 2) as Bb) << drop_sq;
             }
 
-            // Spreads are usually reversible.
-            new_irreversible = self.copy.last_irreversible;
+            // TODO: Consider deduplicating.
+            let dropped = HAND - zeros;
+            let dropped_pieces = hand.wrapping_shr(dropped.wrapping_neg());
+            let dropped_stack = dropped_pieces + (1 << dropped);
+
+            hash ^= hash_stack(drop_sq, dropped_stack, rem_cap);
+            hash ^= hash_sq_pc(drop_sq + piece_tag);
+            touch_bucket!(); // Deliberately force a touch before the condition.
+
+            // Crushing is rare and strange, so we separate it.
+            if new_noble & 1 << drop_sq != 0 {
+                hash ^= hash_sq_pc(drop_sq + (1 << NOBLE_TAG_OFFSET));
+                touch_bucket!(); // First touch was wrong, so touch again.
+
+                new_road |= 1 << drop_sq; // Was a wall, now is a cap.
+                new_irreversible = new_ply; // Crush is irreversible.
+            } else {
+                // Clear the road in case we're placing a wall.
+                new_road = new_road & !(1 << drop_sq) | is_road << drop_sq;
+                new_noble |= is_noble << drop_sq;
+                new_irreversible = self.copy.last_irreversible; // Spread is reversible.
+            }
+
+            *stack = *stack << dropped | dropped_pieces as Stack;
+            opp_own &= !(1 << drop_sq); // Destination stack is always ours.
+            new_tall |= ((*stack >= 1 << 2) as Bb) << drop_sq;
+
+            // TODO: Handle partial recomputations nicely.
+            // TODO: Consider deduplicating.
+            let mut i = 0;
+            let mut old_inf = *Influence::EMPTY.vec_mut();
+            let mut inf = *Influence::EDGES.vec_mut();
+            let mut expandable;
+            let my_road = Simd::<Bb, 1>::splat(new_road & !opp_own);
+            let opp_road = Simd::<Bb, 1>::splat(new_road & opp_own);
+            let roads = simd_swizzle!(my_road, opp_road, [0, 0, 0, 0, 1, 1, 1, 1]);
+
+            while {
+                expandable = inf & roads;
+                (expandable & !old_inf).reduce_or() != 0
+            } {
+                i += 1;
+                old_inf = inf;
+                inf |= expandable.neighbors();
+            }
+
+            new_inf = Influence { vec: inf };
+
+            log!(self, SpreadExpansionIterations(i));
         }
 
         self.update.hashes[new_ply] = hash;
         *unsafe { self.update.stacks.get_unchecked_mut(sq) } = new_stack;
+        new_inf.swap();
         new.val = CopyState {
-            influence: Influence {
-                pair: PovPair::new(opp_inf, inf),
-            },
+            influence: new_inf,
             own: opp_own,
             road: new_road,
             noble: new_noble,

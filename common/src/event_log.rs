@@ -71,4 +71,6 @@ pub enum EventKind {
     MakePlaceWall,
     MakePlaceCap,
     PlacementExpansionIterations(u8),
+    SpreadDistance(u8),
+    SpreadExpansionIterations(u8),
 }

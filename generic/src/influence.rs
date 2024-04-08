@@ -9,6 +9,20 @@ pub union Influence {
 }
 
 impl Influence {
+    pub const EMPTY: Self = Influence {
+        vec: Simd::from_array([0; 8]),
+    };
+
+    pub const EDGES: Self = Influence {
+        arr: [Simd::from_array([EDGE_RIGHT, EDGE_TOP, EDGE_LEFT, EDGE_BOTTOM]); 2],
+    };
+
+    #[inline]
+    pub fn swap(&mut self) {
+        let v = self.vec_mut();
+        *v = simd_swizzle!(*v, [4, 5, 6, 7, 0, 1, 2, 3]);
+    }
+
     #[inline]
     pub fn pair_mut(&mut self) -> &mut PovPair<Simd<Bb, 4>> {
         unsafe { &mut self.pair }
