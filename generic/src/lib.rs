@@ -1,15 +1,15 @@
-#![no_std] // Ensures stuff like WASM will just work
+#![no_std] // Ensures stuff like WASM will just work.
 #![allow(
-	clippy::precedence, // Personal opinion
-	clippy::comparison_chain, // Required for optimal performance at the time of writing
-    clippy::absurd_extreme_comparisons, // Misfires for branches involving constants
-    clippy::unnecessary_cast, // Misfires because the crate is pseudo-generic
-    internal_features, // We use `core_intrinsics`
+	clippy::precedence, // Personal opinion.
+	clippy::comparison_chain, // Required for optimal performance at the time of writing.
+    clippy::absurd_extreme_comparisons, // Misfires for branches involving constants.
+    clippy::unnecessary_cast, // Misfires because the crate is pseudo-generic.
+    internal_features, // We use `core_intrinsics`.
 )]
 #![feature(
-    portable_simd, // Used extensively for performance
-    strict_provenance, // Provides `with_addr`
-    core_intrinsics, // Provides `unchecked_shl`, `unlikely`, `likely`
+    portable_simd, // Used extensively for performance.
+    strict_provenance, // Provides `with_addr`.
+    core_intrinsics, // Provides `unchecked_shl`, `unlikely`, `likely`.
 )]
 
 extern crate alloc;
@@ -129,6 +129,7 @@ struct UnmakePlace {
 #[derive(Clone, Copy)]
 struct UnmakeSpread {
     orig_stack: Stack,
+    offset: isize,
 }
 
 #[macro_export]
@@ -150,15 +151,15 @@ macro_rules! log {
 }
 
 #[inline]
-fn sq(action: u16) -> u16 {
+fn sq(action: u16) -> usize {
     let r = action & (1 << TAG_OFFSET) - 1;
     debug_assert_ne!(BOARD & 1 << r, 0);
-    r
+    r as _
 }
 
 #[inline]
-fn pat(action: u16) -> u16 {
-    action >> PAT_OFFSET
+fn pat(action: u16) -> u32 {
+    (action >> PAT_OFFSET) as _
 }
 
 impl<'a> State<'a> {

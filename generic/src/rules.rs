@@ -75,8 +75,8 @@ impl<'a> State<'a> {
 
         let mut player = self.player();
 
-        let pat = pat(action);
-        let sq = sq(action) as usize;
+        let sq = sq(action);
+        let mut pat = pat(action);
         if pat == 0 {
             player ^= self.is_first_move();
 
@@ -160,8 +160,6 @@ impl<'a> State<'a> {
                 opp_own ^= opt_fence!(new_road); // Stop LLVM from hoisting this.
             }
         } else {
-            let mut pat = pat as u32; // u16 operations are slow, and LLVM does not promote them.
-
             log!(self, SpreadDistance(pat.count_ones() as _));
 
             // Decode the pattern.
@@ -199,6 +197,7 @@ impl<'a> State<'a> {
                 1 << 0 | (ROW_LEN as u32) << 8 | 256 - 1 << 16 | (256 - ROW_LEN as u32) << 24;
             let dir = action >> TAG_OFFSET & 3;
             let offset = (STEP_OFFSET_TABLE >> dir * 8) as i8 as isize;
+            unmake.val.kind.spread.offset = offset;
 
             let mut drop_sq = sq;
             let mut stack;
@@ -271,17 +270,18 @@ impl<'a> State<'a> {
             // TODO: Handle partial recomputations nicely.
             // TODO: Consider deduplicating.
             let mut i = 0;
-            let mut old_inf = *Influence::EMPTY.vec_mut();
-            let mut inf = *Influence::EDGES.vec_mut();
+            let mut old_inf = Influence::EMPTY;
+            let mut inf = Influence::EDGES;
             let mut expandable;
             let my_road = Simd::<Bb, 1>::splat(new_road & !opp_own);
             let opp_road = Simd::<Bb, 1>::splat(new_road & opp_own);
             let roads = simd_swizzle!(my_road, opp_road, [0, 0, 0, 0, 1, 1, 1, 1]);
 
-            while {
+            loop {
                 expandable = inf & roads;
-                (expandable & !old_inf).reduce_or() != 0
-            } {
+                if (expandable & !old_inf).reduce_or() == 0 {
+                    break;
+                }
                 i += 1;
                 old_inf = inf;
                 inf |= expandable.neighbors();
@@ -309,16 +309,38 @@ impl<'a> State<'a> {
     #[no_mangle]
     #[inline]
     pub(crate) fn unmake(&mut self, unmake: &Unmake, action: u16) {
-        let mut player = self.player();
-        let pat = pat(action);
-        let sq = sq(action);
+        let mut sq = sq(action);
+        let mut pat = pat(action);
         if pat == 0 {
-            player ^= self.is_first_move();
             unsafe {
                 *(self.update as *mut UpdateState as *mut u8)
                     .with_addr(unmake.kind.place.pieces_left_ptr) += 1;
-                *self.update.stacks.get_unchecked_mut(sq as usize) = 1;
+                *self.update.stacks.get_unchecked_mut(sq) = 1;
             }
+        } else {
+            unsafe {
+                *self.update.stacks.get_unchecked_mut(sq) = unmake.kind.spread.orig_stack;
+            }
+
+            let mut zeros = pat.trailing_zeros();
+            let mut stack;
+
+            loop {
+                sq = sq.wrapping_add_signed(unsafe { unmake.kind.spread.offset });
+                stack = unsafe { self.update.stacks.get_unchecked_mut(sq) };
+                pat &= pat - 1;
+                if pat == 0 {
+                    break;
+                }
+
+                let next = pat.trailing_zeros();
+                let dropped = next - zeros;
+                zeros = next;
+                *stack >>= dropped;
+            }
+
+            let dropped = HAND - zeros;
+            *stack >>= dropped;
         }
     }
 }

@@ -9,13 +9,17 @@ pub union Influence {
 }
 
 impl Influence {
-    pub const EMPTY: Self = Influence {
-        vec: Simd::from_array([0; 8]),
-    };
-
-    pub const EDGES: Self = Influence {
-        arr: [Simd::from_array([EDGE_RIGHT, EDGE_TOP, EDGE_LEFT, EDGE_BOTTOM]); 2],
-    };
+    pub const EMPTY: Simd<Bb, 8> = Simd::from_array([0; 8]);
+    pub const EDGES: Simd<Bb, 8> = Simd::from_array([
+        EDGE_LEFT,
+        EDGE_BOTTOM,
+        EDGE_RIGHT,
+        EDGE_TOP,
+        EDGE_LEFT,
+        EDGE_BOTTOM,
+        EDGE_RIGHT,
+        EDGE_TOP,
+    ]);
 
     #[inline]
     pub fn swap(&mut self) {
