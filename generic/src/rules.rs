@@ -3,7 +3,7 @@ use crate::*;
 impl<'a> State<'a> {
     #[inline]
     pub(crate) fn for_actions<B, C>(
-        &mut self,
+        mut self,
         mut acc: C,
         f: fn(State, C, u16) -> ControlFlow<B, C>,
     ) -> ControlFlow<B, C> {
@@ -37,8 +37,33 @@ impl<'a> State<'a> {
             for_placements!(WALL_TAG, GenPlaceWall);
         }
 
+        // TODO: Cap placements should probably be naively ordered before wall placements.
         if self.update.caps_left[self.player()] > 0 {
             for_placements!(CAP_TAG, GenPlaceCap);
+        }
+
+        let mut left = self.copy.own;
+        while left != 0 {
+            // Handle spreads. If it's the first move this is skipped, and also the own mask is empty.
+            // The own mask can become empty over the course of a game, so the entry check must stay.
+            let sq = left.trailing_zeros();
+            let stack = *unsafe { self.update.stacks.get_unchecked(sq as usize) };
+            let pat_base = 1u32
+                << PAT_OFFSET
+                << stack
+                    .leading_zeros()
+                    .saturating_sub(STACK_CAP as u32 - HAND);
+
+            let blocker_plus = (self.copy.noble >> 1 | EDGE_RIGHT) >> sq;
+            let range = blocker_plus.trailing_zeros();
+            if range > 0 {
+                let dir = Right as u32;
+                let action_template = sq | dir << TAG_OFFSET;
+            }
+
+            // For vertical shift a board with inner padding and end padding and increment it.
+
+            left &= left - 1;
         }
 
         Continue(acc)
@@ -46,7 +71,7 @@ impl<'a> State<'a> {
 
     #[no_mangle]
     #[inline]
-    pub(crate) fn make(&mut self, new: &mut Out<CopyState>, unmake: &mut Out<Unmake>, action: u16) {
+    pub(crate) fn make(self, new: &mut Out<CopyState>, unmake: &mut Out<Unmake>, action: u16) {
         let new_ply = self.copy.ply + 1;
 
         let mut hash = self.update.hashes[self.copy.ply] ^ HASH_SIDE_TO_MOVE;
@@ -80,7 +105,7 @@ impl<'a> State<'a> {
         if pat == 0 {
             player ^= self.is_first_move();
 
-            new_stack = player as Stack + 2;
+            new_stack = player as Stack | 2;
 
             // Update the hash.
             hash ^= hash_stack(sq, new_stack as _, STACK_CAP as _);
@@ -308,7 +333,7 @@ impl<'a> State<'a> {
 
     #[no_mangle]
     #[inline]
-    pub(crate) fn unmake(&mut self, unmake: &Unmake, action: u16) {
+    pub(crate) fn unmake(self, unmake: &Unmake, action: u16) {
         let mut sq = sq(action);
         let mut pat = pat(action);
         if pat == 0 {
