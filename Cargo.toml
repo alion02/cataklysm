@@ -1,48 +1,11 @@
 [workspace]
+resolver = "2"
 members = [
-	"common",
-	"generic/crates/size3",
-	"generic/crates/size4",
-	"generic/crates/size5",
-	"generic/crates/size6",
-	"generic/crates/size7",
-	"generic/crates/size8",
+    "make",
+    "crates/size3",
+    "crates/size4",
+    "crates/size5",
+    "crates/size6",
+    "crates/size7",
+    "crates/size8",
 ]
-
-[package]
-name = "cataklysm"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[features]
-default = ["all-sizes"]
-
-all-sizes = ["3", "4", "5", "6", "7", "8"]
-common-sizes = ["5", "6"]
-3 = ["dep:size3"]
-4 = ["dep:size4"]
-5 = ["dep:size5"]
-6 = ["dep:size6"]
-7 = ["dep:size7"]
-8 = ["dep:size8"]
-
-allow-old-x86-64 = []
-
-[dependencies]
-common = { path = "common" }
-size3 = { path = "generic/crates/size3", optional = true }
-size4 = { path = "generic/crates/size4", optional = true }
-size5 = { path = "generic/crates/size5", optional = true }
-size6 = { path = "generic/crates/size6", optional = true }
-size7 = { path = "generic/crates/size7", optional = true }
-size8 = { path = "generic/crates/size8", optional = true }
-
-[profile.release]
-codegen-units = 1
-
-[profile.release-safe]
-inherits = "release"
-debug-assertions = true
-overflow-checks = true
