@@ -9,17 +9,15 @@ use anyhow::*;
 fn main() -> Result<()> {
     _ = remove_dir_all("./crates");
 
-    let crates: Vec<_> = ('3'..'9')
-        .map(|s| format!("size{s}").into_boxed_str())
-        .collect();
-
     let mut workspace = String::new();
 
-    for c in crates {
-        let size = PathBuf::from(format!("./crates/{c}/Cargo.toml"));
-        create_dir_all(size.parent().unwrap())?;
+    for s in '3'..'9' {
+        let c = format!("size{s}");
+
+        let crate_path = PathBuf::from(format!("./crates/{c}/Cargo.toml"));
+        create_dir_all(crate_path.parent().unwrap())?;
         write(
-            size,
+            crate_path,
             format!(
                 r#"[package]
 name = "{c}"
@@ -28,6 +26,10 @@ edition = "2021"
 
 [lib]
 path = "../../generic/lib.rs"
+
+[features]
+default = ["{s}"]
+{s} = []
 "#,
             ),
         )?;

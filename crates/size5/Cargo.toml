@@ -5,3 +5,7 @@ edition = "2021"
 
 [lib]
 path = "../../generic/lib.rs"
+
+[features]
+default = ["5"]
+5 = []
