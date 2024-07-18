@@ -398,7 +398,10 @@ impl State {
         let mut s = self;
         let color = s.active_color() ^ s.is_opening();
 
-        debug_assert!(s.is_legal(action), "{action} for {s:?}");
+        debug_assert!(
+            action == Action::PASS || s.is_legal(action),
+            "{action} for {s:?}",
+        );
 
         let hash = *s.hash_mut() ^ Hash::SIDE_TO_MOVE;
 
