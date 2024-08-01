@@ -1,26 +1,23 @@
-use std::{
-    fmt::Write,
-    fs::{create_dir_all, remove_dir_all, write},
-    path::PathBuf,
-};
+#![allow(
+    clippy::format_collect, // Performance is irrelevant
+)]
+
+use std::fs::{create_dir_all, remove_dir_all, write};
 
 use anyhow::*;
 
 fn main() -> Result<()> {
-    _ = remove_dir_all("./crates");
+    _ = remove_dir_all("crates");
 
-    let mut workspace = String::new();
+    let crates = (3..9).map(|size| (size, format!("size{size}"), format!("crates/size{size}")));
 
-    for s in '3'..'9' {
-        let c = format!("size{s}");
-
-        let crate_path = PathBuf::from(format!("./crates/{c}/Cargo.toml"));
-        create_dir_all(crate_path.parent().unwrap())?;
+    for (size, name, path) in crates.clone() {
+        create_dir_all(&path)?;
         write(
-            crate_path,
+            format!("{path}/Cargo.toml"),
             format!(
                 r#"[package]
-name = "{c}"
+name = "{name}"
 version = "0.1.0"
 edition = "2021"
 
@@ -28,13 +25,11 @@ edition = "2021"
 path = "../../generic/lib.rs"
 
 [features]
-default = ["{s}"]
-{s} = []
+default = ["{size}"]
+{size} = []
 "#,
             ),
         )?;
-
-        writeln!(workspace, r#"    "crates/{c}","#)?;
     }
 
     write(
@@ -44,8 +39,11 @@ default = ["{s}"]
 resolver = "2"
 members = [
     "make",
-{workspace}]
+{}]
 "#,
+            crates
+                .map(|(_size, _name, path)| format!("    \"{path}\",\n"))
+                .collect::<String>()
         ),
     )?;
 
