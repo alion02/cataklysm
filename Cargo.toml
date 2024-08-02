@@ -2,6 +2,8 @@
 resolver = "2"
 members = [
     "make",
+    "common",
+    "tei",
     "crates/size3",
     "crates/size4",
     "crates/size5",

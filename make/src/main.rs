@@ -39,6 +39,8 @@ default = ["{size}"]
 resolver = "2"
 members = [
     "make",
+    "common",
+    "tei",
 {}]
 "#,
             crates
