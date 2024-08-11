@@ -24,6 +24,9 @@ edition = "2021"
 [lib]
 path = "../../generic/lib.rs"
 
+[dependencies]
+common = {{ path = "../../common" }}
+
 [features]
 default = ["{size}"]
 {size} = []
