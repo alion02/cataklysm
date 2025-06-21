@@ -56,8 +56,7 @@ impl State {
             influence: Pair::both(Influence::EDGES),
             hashes: WrappingArray([Hash::ZERO; MAX_DEPTH]),
             killers: WrappingArray([Action::PASS; MAX_DEPTH]),
-            tt: core::iter::repeat(TtBucket::default())
-                .take(opt.params.tt_size)
+            tt: std::iter::repeat_n(TtBucket::default(), opt.params.tt_size)
                 .collect::<Vec<_>>()
                 .into_boxed_slice(),
             search: SearchParamsProvider::new(opt.params).ok_or(NewGameError)?,
@@ -184,7 +183,7 @@ impl State {
                             break 'update_tt;
                         }
 
-                        s.for_actions((), |_, s, action| {
+                        _ = s.for_actions((), |_, s, action| {
                             if action == tt_action || action == killer {
                                 Continue(())
                             } else {

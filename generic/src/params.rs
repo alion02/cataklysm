@@ -1,3 +1,5 @@
+#![expect(unexpected_cfgs)] // Due to compiling the same code as multiple crates
+
 use crate::*;
 
 pub use inner::*;

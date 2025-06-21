@@ -1,6 +1,8 @@
 #![allow(
 	clippy::precedence, // Personal opinion
 	clippy::comparison_chain, // Required for optimal performance at the time of writing
+    clippy::missing_transmute_annotations, // Do not want to state the obvious
+    static_mut_refs, // Widely used for one-time initialization
 )]
 
 mod action;
