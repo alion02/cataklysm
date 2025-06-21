@@ -1,4 +1,5 @@
 use common::game::*;
+pub use common::*;
 
 pub fn new_game(size: usize, opt: Options) -> Result<Box<dyn Game>, NewGameError> {
     Ok(match size {
