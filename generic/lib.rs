@@ -39,3 +39,7 @@ const PAT_OFFSET: u32 = TAG_OFFSET + 2;
 const FLAT_TAG: u32 = 1;
 const WALL_TAG: u32 = 2;
 const CAP_TAG: u32 = 3;
+
+struct State {}
+
+struct Frame {}
