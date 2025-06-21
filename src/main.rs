@@ -1,4 +1,3 @@
-mod game;
 mod tei;
 
 use std::{
@@ -7,7 +6,7 @@ use std::{
     time::Instant,
 };
 
-use crate::game::new_game;
+use cataklysm::new_game;
 use common::game::*;
 
 use tokio::runtime::Builder;

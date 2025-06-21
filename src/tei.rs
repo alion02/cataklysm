@@ -1,6 +1,6 @@
 use std::{pin::Pin, thread::spawn};
 
-use crate::game::new_game;
+use cataklysm::new_game;
 use common::{game::*, pair::Pair};
 
 use tokio::{
