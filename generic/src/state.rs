@@ -808,9 +808,9 @@ impl Game for State {
                     s.for_actions(0, |sum, _, _| Continue(sum + 1))
                         .into_continue()
                 },
-                |_, _| 1,
-                |_, _| 1,
-                |_, _| 1,
+                |_, _| 0,
+                |_, _| 0,
+                |_, _| 0,
             ),
             _ => self.status(
                 (),
@@ -820,9 +820,9 @@ impl Game for State {
                     })
                     .into_continue()
                 },
-                |_, _| 1,
-                |_, _| 1,
-                |_, _| 1,
+                |_, _| 0,
+                |_, _| 0,
+                |_, _| 0,
             ),
         }
     }
